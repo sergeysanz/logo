@@ -10,20 +10,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Abrir popup
     openPopupBtn.addEventListener("click", () => {
-        popup.style.display = "flex"; // mostrar popup
+        popup.style.display = "flex";
     });
 
     // Cerrar popup
     closePopup.addEventListener("click", () => {
         popup.style.display = "none";
     });
-
-    window.addEventListener("click", (e) => {
-        if (e.target === popup) popup.style.display = "none";
-    });
+    window.addEventListener("click", e => { if(e.target===popup) popup.style.display="none"; });
 
     // Enviar formulario
-    logoForm.addEventListener("submit", async (e) => {
+    logoForm.addEventListener("submit", async e => {
         e.preventDefault();
         const formData = new FormData(logoForm);
 
@@ -32,37 +29,25 @@ document.addEventListener("DOMContentLoaded", function () {
         strategyDiv.textContent = "";
 
         try {
-            const response = await fetch("/generate", {
-                method: "POST",
-                body: formData
-            });
-
+            const response = await fetch("/generate", { method: "POST", body: formData });
             const data = await response.json();
 
-            if (data.error) {
-                insightDiv.textContent = "Error: " + data.error;
-                strategyDiv.textContent = "";
-                return;
-            }
+            if (data.error) { insightDiv.textContent = "Error: "+data.error; strategyDiv.textContent=""; return; }
 
-            // Mostrar logo
             generatedLogo.src = "data:image/png;base64," + data.logo;
-
-            // Mostrar insight y estrategia
             insightDiv.textContent = "Insight / Lema: " + data.brand_strategy.split("\n")[0];
             strategyDiv.textContent = data.brand_strategy;
 
-            // Descargar logo
             downloadBtn.onclick = () => {
-                const a = document.createElement("a");
+                const a=document.createElement("a");
                 a.href = generatedLogo.src;
-                a.download = "logo.png";
+                a.download="logo.png";
                 a.click();
             };
 
-        } catch (err) {
-            insightDiv.textContent = "Error al generar el logo: " + err.message;
-            strategyDiv.textContent = "";
+        } catch(err) {
+            insightDiv.textContent="Error al generar el logo: "+err.message;
+            strategyDiv.textContent="";
         }
     });
 });
