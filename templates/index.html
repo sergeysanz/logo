@@ -2,37 +2,63 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Generador de Logos Gestalt</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spicy Sauce — ALT SPICE Logo Generator 🌶️</title>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+
+<!-- CSS -->
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<!-- GSAP -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+
 </head>
 <body>
-<h1>Generador de Logos Creativos</h1>
 
-<form id="logoForm" enctype="multipart/form-data">
-<input type="text" name="title" placeholder="Nombre de la marca" required>
-<input type="text" name="theme" placeholder="Valores separados por coma">
-<select name="style_corpus" multiple>
-  <option value="estilo1">Estilo 1</option>
-  <option value="estilo2">Estilo 2</option>
-  <option value="estilo3">Estilo 3</option>
-  <option value="estilo4">Estilo 4</option>
-  <option value="estilo5">Estilo 5</option>
-  <option value="estilo6">Estilo 6</option>
-  <option value="estilo7">Estilo 7</option>
-  <option value="estilo8">Estilo 8</option>
-</select>
-<input type="file" name="element1" accept="image/*">
-<input type="file" name="element2" accept="image/*">
-<button type="submit">Generar Logo</button>
-</form>
+<header class="header">
+    <div class="container header__inner">
+        <img src="https://sergeysanz.github.io/alt/logo.png" alt="ALT SPICE Logo" class="logo">
+        <h1 class="site-title">Spicy Sauce</h1>
+    </div>
+</header>
 
-<div id="logoPopup">
-<img id="generatedLogo">
-<br>
-<button onclick="downloadLogo()">Descargar</button>
-<button onclick="closePopup()">Cerrar</button>
+<main class="main">
+    <section class="hero">
+        <h2 class="hero-title">Generador de Logos Creativos</h2>
+        <p class="hero-text">Describe tu marca o idea y sube hasta dos imágenes de referencia para crear un logo único.</p>
+        <button id="openPopup" class="btn-primary">Generar Logo 🌶️</button>
+    </section>
+</main>
+
+<!-- POPUP -->
+<div id="logoPopup" class="popup">
+    <div class="popup-content">
+        <span class="close">&times;</span>
+        <h3>Genera tu logo</h3>
+        <form id="logoForm" enctype="multipart/form-data">
+            <input type="text" name="title" placeholder="Nombre de tu marca" required>
+            <textarea name="theme" placeholder="Describe tu marca o idea"></textarea>
+            <label class="file-upload">
+                <input type="file" name="element1" accept="image/*">
+                + Subir Imagen 1
+            </label>
+            <label class="file-upload">
+                <input type="file" name="element2" accept="image/*">
+                + Subir Imagen 2
+            </label>
+            <button type="submit" class="btn-primary">Crear Logo</button>
+        </form>
+        <div class="result">
+            <img id="generatedLogo">
+            <button id="downloadBtn">Descargar</button>
+        </div>
+    </div>
 </div>
 
+<!-- JS -->
 <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

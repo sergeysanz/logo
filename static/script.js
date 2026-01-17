@@ -1,6 +1,32 @@
-document.getElementById('logoForm').addEventListener('submit', function(e){
+const openPopupBtn = document.getElementById('openPopup');
+const popup = document.getElementById('logoPopup');
+const closeBtn = popup.querySelector('.close');
+const form = document.getElementById('logoForm');
+const generatedLogo = document.getElementById('generatedLogo');
+const downloadBtn = document.getElementById('downloadBtn');
+
+// Animación inicial GSAP
+gsap.from(".logo", {opacity:0, y:-50, duration:1, ease:"power2.out"});
+gsap.from(".site-title", {opacity:0, y:-20, delay:0.5, duration:1, ease:"power2.out"});
+gsap.from(".hero-title", {opacity:0, y:30, delay:1, duration:1, ease:"power2.out"});
+gsap.from(".hero-text", {opacity:0, y:30, delay:1.2, duration:1, ease:"power2.out"});
+gsap.from(".btn-primary", {opacity:0, scale:0.8, delay:1.5, duration:0.8, ease:"back.out(1.7)"});
+
+// Abrir popup
+openPopupBtn.addEventListener('click', () => {
+    popup.style.display = 'flex';
+    gsap.to(".popup-content", {opacity:1, y:0, duration:0.5, ease:"power2.out"});
+});
+
+// Cerrar popup
+closeBtn.addEventListener('click', () => {
+    gsap.to(".popup-content", {opacity:0, y:-50, duration:0.3, ease:"power2.in", onComplete:()=>{popup.style.display='none';}});
+});
+
+// Formulario
+form.addEventListener('submit', function(e){
     e.preventDefault();
-    let formData = new FormData(this);
+    const formData = new FormData(this);
 
     fetch('/generate',{
         method:'POST',
@@ -12,20 +38,16 @@ document.getElementById('logoForm').addEventListener('submit', function(e){
     })
     .then(blob => {
         const url = URL.createObjectURL(blob);
-        document.getElementById('generatedLogo').src = url;
-        document.getElementById('logoPopup').style.display = 'block';
+        generatedLogo.src = url;
+        gsap.to(".result", {opacity:1, duration:0.5});
     })
     .catch(err => alert(err));
 });
 
-function downloadLogo(){
-    const img = document.getElementById('generatedLogo');
+// Descargar logo
+downloadBtn.addEventListener('click', () => {
     const a = document.createElement('a');
-    a.href = img.src;
+    a.href = generatedLogo.src;
     a.download = 'logo.png';
     a.click();
-}
-
-function closePopup(){
-    document.getElementById('logoPopup').style.display = 'none';
-}
+});

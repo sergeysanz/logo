@@ -1,24 +1,189 @@
+:root {
+    --primary: #ff718d;
+    --bg: #0e0e0e;
+    --bg-light: #f5f5f5;
+    --text-light: #fff;
+    --text-dark: #222;
+    --accent: #ffd166;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 body {
-    font-family: sans-serif;
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text-light);
+    overflow-x: hidden;
+}
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+    padding: 0 24px;
+}
+
+.header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 0;
+}
+
+.logo {
+    height: 100px;
+    cursor: pointer;
+    transition: transform 0.5s ease, filter 0.5s ease;
+}
+.logo:hover {
+    transform: rotate(-5deg) scale(1.2);
+    filter: drop-shadow(0 0 20px var(--primary));
+}
+
+.site-title {
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin-top: 12px;
+    color: var(--accent);
+    letter-spacing: 2px;
+}
+
+/* Hero */
+.main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
     text-align: center;
-    padding: 50px;
+    padding: 50px 20px;
 }
-input, select, button {
-    padding: 10px;
-    margin: 10px;
-    font-size: 16px;
+
+.hero-title {
+    font-size: 2.5rem;
+    margin-bottom: 16px;
+    opacity: 0;
 }
-#logoPopup {
+
+.hero-text {
+    font-size: 1.2rem;
+    margin-bottom: 32px;
+    color: #ccc;
+    opacity: 0;
+}
+
+.btn-primary {
+    background: linear-gradient(45deg, var(--primary), var(--accent));
+    color: white;
+    border: none;
+    padding: 16px 36px;
+    font-size: 1.1rem;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.btn-primary:hover {
+    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0px 8px 30px rgba(255,113,141,0.5);
+}
+
+/* POPUP */
+.popup {
     display: none;
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%,-50%);
-    background: white;
-    padding: 20px;
+    top:0; left:0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(5px);
+    justify-content: center;
+    align-items: center;
     z-index: 1000;
-    border: 1px solid #ccc;
 }
-#logoPopup img {
-    max-width: 400px;
+
+.popup-content {
+    background: var(--bg-light);
+    color: var(--text-dark);
+    padding: 40px 30px;
+    border-radius: 20px;
+    max-width: 550px;
+    width: 90%;
+    text-align: center;
+    position: relative;
+    transform: translateY(-50px);
+    opacity: 0;
+}
+
+.popup-content h3 {
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+    color: var(--primary);
+}
+
+/* Close button */
+.close {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+/* Form */
+.popup-content input[type="text"],
+.popup-content textarea {
+    width: 90%;
+    padding: 14px;
+    margin: 10px 0;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    transition: box-shadow 0.3s ease;
+}
+.popup-content input[type="text"]:focus,
+.popup-content textarea:focus {
+    box-shadow: 0 0 10px var(--primary);
+    outline: none;
+}
+
+.file-upload {
+    display: block;
+    margin: 10px auto;
+    cursor: pointer;
+    background: #eee;
+    padding: 12px;
+    border-radius: 10px;
+    transition: background 0.3s;
+    width: 60%;
+}
+.file-upload:hover {
+    background: #ddd;
+}
+.file-upload input {
+    display: none;
+}
+
+.result {
+    margin-top: 20px;
+    opacity: 0;
+}
+.result img {
+    max-width: 100%;
+    margin-bottom: 10px;
+    border-radius: 12px;
+}
+
+#downloadBtn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+#downloadBtn:hover {
+    transform: scale(1.05);
+    box-shadow: 0px 8px 20px rgba(255,113,141,0.5);
 }
