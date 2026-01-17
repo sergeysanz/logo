@@ -1,5 +1,3 @@
-// script.js
-
 document.addEventListener("DOMContentLoaded", function () {
     const openPopupBtn = document.getElementById("openPopup");
     const popup = document.getElementById("logoPopup");
@@ -7,14 +5,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const logoForm = document.getElementById("logoForm");
     const generatedLogo = document.getElementById("generatedLogo");
     const downloadBtn = document.getElementById("downloadBtn");
-
-    // Aquí se agregarán los campos de insight y estrategia
-    const insightDiv = document.createElement("p");
-    insightDiv.id = "brandInsight";
-    const strategyDiv = document.createElement("p");
-    strategyDiv.id = "brandStrategy";
-    logoForm.parentElement.appendChild(insightDiv);
-    logoForm.parentElement.appendChild(strategyDiv);
+    const insightDiv = document.getElementById("brandInsight");
+    const strategyDiv = document.getElementById("brandStrategy");
 
     // Abrir popup
     openPopupBtn.addEventListener("click", () => {
@@ -27,15 +19,12 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     window.addEventListener("click", (e) => {
-        if (e.target == popup) {
-            popup.style.display = "none";
-        }
+        if (e.target === popup) popup.style.display = "none";
     });
 
     // Enviar formulario
     logoForm.addEventListener("submit", async (e) => {
         e.preventDefault();
-
         const formData = new FormData(logoForm);
 
         // Mostrar mensaje de carga
@@ -60,12 +49,12 @@ document.addEventListener("DOMContentLoaded", function () {
             generatedLogo.src = "data:image/png;base64," + data.logo;
 
             // Mostrar insight / lema
-            insightDiv.textContent = "Insight / Lema: " + data.brand_insight;
+            insightDiv.textContent = "Insight / Lema: " + data.brand_strategy.split("\n")[0];
 
             // Mostrar estrategia de marketing
-            strategyDiv.textContent = "Estrategia: " + data.brand_strategy;
+            strategyDiv.textContent = data.brand_strategy;
 
-            // Configurar botón de descarga
+            // Botón de descarga
             downloadBtn.onclick = () => {
                 const a = document.createElement("a");
                 a.href = generatedLogo.src;
