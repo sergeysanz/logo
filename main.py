@@ -25,7 +25,6 @@ def build_logo_prompt(title, theme, uploaded_images):
     - Abstracción minimalista y limpia
     - Principios de Gestalt aplicados
     """
-
     reference_text = ""
     for idx, f in enumerate(uploaded_images, start=1):
         if f:
@@ -36,7 +35,7 @@ def build_logo_prompt(title, theme, uploaded_images):
                 img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
                 reference_text += f" Puedes usar la imagen {idx} como inspiración de forma y silueta."
             except Exception:
-                continue  # Ignora si hay problema al abrir imagen
+                continue
 
     prompt_text = f"""
 Crea un logo profesional para la marca "{title}" basado en "{theme}".
@@ -50,6 +49,38 @@ Fondo transparente, sin texturas ni efectos innecesarios, con líneas y formas d
     return prompt_text
 
 # ------------------------------
+# Función para generar insights y estrategia
+# ------------------------------
+def generate_brand_strategy(title, theme, target_gender, target_age_range):
+    """
+    Genera:
+    - Lema corto o insight de marca
+    - Estrategia de comunicación y marketing para redes sociales y eventos
+    - Identificación del grupo generacional y rasgos de personalidad
+    """
+    prompt_text = f"""
+Eres un experto en branding y marketing. 
+Crea para la marca "{title}" con el tema "{theme}" lo siguiente:
+
+1. Un lema o insight corto y poderoso para la marca.
+2. Estrategia de marketing digital para redes sociales y eventos.
+3. Identifica el público objetivo: género {target_gender}, edad {target_age_range}, grupo generacional, y rasgos de personalidad.
+4. Sugiere mensajes y tono de comunicación más efectivos para ese grupo generacional.
+
+Entrega la información de forma clara y organizada.
+"""
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",  # Modelo más potente para texto
+            messages=[{"role": "user", "content": prompt_text}],
+            max_tokens=500
+        )
+        content = response.choices[0].message['content']
+        return content
+    except Exception as e:
+        return str(e)
+
+# ------------------------------
 # Rutas Flask
 # ------------------------------
 @app.route('/')
@@ -60,29 +91,36 @@ def index():
 def generate_logo():
     title = request.form.get("title", "")
     theme = request.form.get("theme", "")
+    target_gender = request.form.get("gender", "mujer")
+    target_age_range = request.form.get("age_range", "18-35")
     element1 = request.files.get("element1")
     element2 = request.files.get("element2")
 
-    prompt_text = build_logo_prompt(title, theme, [element1, element2])
+    # Genera prompt para logo
+    logo_prompt = build_logo_prompt(title, theme, [element1, element2])
 
+    # Genera logo
     try:
-        # Generación de imagen usando el motor actual compatible con tu librería
         response = openai.Image.create(
-            model="gpt-image-1",  # Último motor de imágenes
-            prompt=prompt_text,
-            n=1,                   # Solo 1 imagen
-            size="1024x1024"       # Alta resolución
+            model="gpt-image-1",
+            prompt=logo_prompt,
+            n=1,
+            size="1024x1024"
         )
-
-        # Extraemos la URL de la imagen generada
         image_url = response['data'][0]['url']
         img_response = requests.get(image_url)
         img_bytes = img_response.content
-
-        return send_file(io.BytesIO(img_bytes), mimetype='image/png')
-
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Error generando logo: {str(e)}"}), 500
+
+    # Genera estrategia de marca e insight
+    brand_strategy = generate_brand_strategy(title, theme, target_gender, target_age_range)
+
+    # Retornamos todo en JSON
+    return jsonify({
+        "logo": base64.b64encode(img_bytes).decode("utf-8"),
+        "brand_strategy": brand_strategy
+    })
 
 # ------------------------------
 # Main
