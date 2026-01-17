@@ -17,7 +17,9 @@ document.addEventListener("DOMContentLoaded", function () {
     closePopup.addEventListener("click", () => {
         popup.style.display = "none";
     });
-    window.addEventListener("click", e => { if(e.target===popup) popup.style.display="none"; });
+    window.addEventListener("click", e => {
+        if (e.target === popup) popup.style.display = "none";
+    });
 
     // Enviar formulario
     logoForm.addEventListener("submit", async e => {
@@ -30,24 +32,43 @@ document.addEventListener("DOMContentLoaded", function () {
 
         try {
             const response = await fetch("/generate", { method: "POST", body: formData });
-            const data = await response.json();
 
-            if (data.error) { insightDiv.textContent = "Error: "+data.error; strategyDiv.textContent=""; return; }
+            // Intentamos parsear JSON de forma segura
+            let data;
+            try {
+                data = await response.json();
+            } catch (jsonError) {
+                insightDiv.textContent = "Error: La respuesta del servidor no es JSON válido.";
+                strategyDiv.textContent = "";
+                return;
+            }
 
-            generatedLogo.src = "data:image/png;base64," + data.logo;
-            insightDiv.textContent = "Insight / Lema: " + data.brand_strategy.split("\n")[0];
-            strategyDiv.textContent = data.brand_strategy;
+            if (data.error) {
+                insightDiv.textContent = "Error: " + data.error;
+                strategyDiv.textContent = "";
+                return;
+            }
 
-            downloadBtn.onclick = () => {
-                const a=document.createElement("a");
-                a.href = generatedLogo.src;
-                a.download="logo.png";
-                a.click();
-            };
+            // Mostrar logo
+            if (data.logo) {
+                generatedLogo.src = "data:image/png;base64," + data.logo;
+                downloadBtn.onclick = () => {
+                    const a = document.createElement("a");
+                    a.href = generatedLogo.src;
+                    a.download = "logo.png";
+                    a.click();
+                };
+            } else {
+                generatedLogo.src = "";
+            }
 
-        } catch(err) {
-            insightDiv.textContent="Error al generar el logo: "+err.message;
-            strategyDiv.textContent="";
+            // Mostrar insight y estrategia
+            insightDiv.textContent = "Insight / Lema: " + (data.brand_strategy ? data.brand_strategy.split("\n")[0] : "No disponible");
+            strategyDiv.textContent = data.brand_strategy || "No disponible";
+
+        } catch (err) {
+            insightDiv.textContent = "Error al generar el logo: " + err.message;
+            strategyDiv.textContent = "";
         }
     });
 });
