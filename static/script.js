@@ -27,7 +27,6 @@ document.addEventListener("DOMContentLoaded", function () {
         e.preventDefault();
         const formData = new FormData(logoForm);
 
-        // Mostrar mensaje de carga
         generatedLogo.src = "";
         insightDiv.textContent = "Generando logo e ideas...";
         strategyDiv.textContent = "";
@@ -45,23 +44,17 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
 
-            // Mostrar logo
             generatedLogo.src = "data:image/png;base64," + data.logo;
 
-            // Mostrar insight / lema
             insightDiv.textContent = "Insight / Lema: " + data.brand_strategy.split("\n")[0];
-
-            // Mostrar estrategia de marketing
             strategyDiv.textContent = data.brand_strategy;
 
-            // Botón de descarga
             downloadBtn.onclick = () => {
                 const a = document.createElement("a");
                 a.href = generatedLogo.src;
                 a.download = "logo.png";
                 a.click();
             };
-
         } catch (err) {
             insightDiv.textContent = "Error al generar el logo: " + err.message;
         }
