@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,10 +10,6 @@
 
 <!-- CSS -->
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
-<!-- GSAP -->
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
 
 </head>
 <body>
@@ -41,6 +37,15 @@
         <form id="logoForm" enctype="multipart/form-data">
             <input type="text" name="title" placeholder="Nombre de tu marca" required>
             <textarea name="theme" placeholder="Describe tu marca o idea"></textarea>
+            
+            <!-- Campos para público objetivo -->
+            <select name="gender">
+                <option value="mujer">Mujer</option>
+                <option value="hombre">Hombre</option>
+                <option value="todos">Todos</option>
+            </select>
+            <input type="text" name="age_range" placeholder="Rango de edad (ej: 18-35)">
+
             <label class="file-upload">
                 <input type="file" name="element1" accept="image/*">
                 + Subir Imagen 1
@@ -49,16 +54,73 @@
                 <input type="file" name="element2" accept="image/*">
                 + Subir Imagen 2
             </label>
+
             <button type="submit" class="btn-primary">Crear Logo</button>
         </form>
+
         <div class="result">
-            <img id="generatedLogo">
+            <h4>Logo Generado:</h4>
+            <img id="generatedLogo" alt="Logo generado">
             <button id="downloadBtn">Descargar</button>
+
+            <h4>Insight / Lema de Marca:</h4>
+            <pre id="brandInsight"></pre>
+
+            <h4>Estrategia de Marketing:</h4>
+            <pre id="brandStrategy"></pre>
         </div>
     </div>
 </div>
 
 <!-- JS -->
-<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const popup = document.getElementById("logoPopup");
+    const openPopupBtn = document.getElementById("openPopup");
+    const closeBtn = popup.querySelector(".close");
+    const logoForm = document.getElementById("logoForm");
+    const generatedLogo = document.getElementById("generatedLogo");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const brandInsight = document.getElementById("brandInsight");
+    const brandStrategy = document.getElementById("brandStrategy");
+
+    openPopupBtn.addEventListener("click", () => popup.style.display = "block");
+    closeBtn.addEventListener("click", () => popup.style.display = "none");
+
+    logoForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const formData = new FormData(logoForm);
+
+        const response = await fetch("/generate", {
+            method: "POST",
+            body: formData
+        });
+        const data = await response.json();
+
+        if (data.error) {
+            alert("Error: " + data.error);
+            return;
+        }
+
+        // Mostrar logo generado
+        generatedLogo.src = "data:image/png;base64," + data.logo;
+
+        // Descargar logo
+        downloadBtn.onclick = () => {
+            const a = document.createElement("a");
+            a.href = generatedLogo.src;
+            a.download = formData.get("title") + "_logo.png";
+            a.click();
+        };
+
+        // Mostrar insight y estrategia
+        const strategyText = data.brand_strategy || "";
+        // Podemos separar insight de estrategia si quieres más tarde
+        brandInsight.textContent = strategyText;
+        brandStrategy.textContent = strategyText;
+    });
+});
+</script>
+
 </body>
 </html>
