@@ -1,27 +1,6 @@
 import os
 import io
 import base64
-import requests
-from flask import Flask, render_template, request, send_file, jsonify
-from PIL import Image
-from dotenv import load_dotenv
-import openai
-
-# ------------------------------
-# Carga variables de entorno
-# ------------------------------
-load_dotenv()
-app = Flask(__name__)
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
-# ------------------------------
-# Función para construir prompt conceptual/emocional resumido
-# ------------------------------
-
-import os
-import io
-import base64
-import requests
 from flask import Flask, render_template, request, send_file, jsonify
 from PIL import Image
 from dotenv import load_dotenv
@@ -39,30 +18,33 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 # ------------------------------
 def build_logo_prompt(title, theme, uploaded_images):
     """
-    Prompt profesional para DALL·E 3 (o último motor de OpenAI):
+    Prompt profesional para generar logos:
     - Una sola imagen final
-    - Basado en siluetas de la primera imagen de referencia
+    - Basado en texto y opcionalmente en la primera imagen de referencia
     - Abstracción minimalista y limpia
     - Principios de Gestalt aplicados
     """
 
-    first_image_base64 = None
+    reference_image_text = ""
+    # Si hay al menos una imagen de referencia, la codificamos y mencionamos en el prompt
     for f in uploaded_images:
         if f:
             img = Image.open(f.stream)
             buf = io.BytesIO()
             img.save(buf, format='PNG')
-            first_image_base64 = base64.b64encode(buf.getvalue()).decode("utf-8")
-            break  # Solo usamos la primera imagen
+            img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+            reference_image_text = " Usa la primera imagen de referencia como guía de silueta."
+            break  # Solo la primera imagen
 
     prompt_text = f"""
 Crea un logo profesional para la marca "{title}" basado en "{theme}".
-Usa solo la primera imagen de referencia como guía de silueta, transformándola en una abstracción minimalista y elegante.
+{reference_image_text}
+Transforma los elementos en una abstracción minimalista y elegante.
 Aplica principios de Gestalt (simetría, cierre, figura-fondo, continuidad, proximidad) para lograr armonía visual.
 Entrega una sola imagen final coherente, legible, escalable y adaptable a web e impresión.
 El logo debe ser limpio, con formas definidas, fondo transparente, sin texturas, difuminados ni efectos innecesarios.
 """
-    return prompt_text, first_image_base64
+    return prompt_text
 
 # ------------------------------
 # Rutas Flask
@@ -78,60 +60,21 @@ def generate_logo():
     element1 = request.files.get("element1")
     element2 = request.files.get("element2")
 
-    prompt_text, first_image_base64 = build_logo_prompt(title, theme, [element1, element2])
+    prompt_text = build_logo_prompt(title, theme, [element1, element2])
 
     try:
-        # Usamos el motor más reciente de imágenes (DALL·E 3 o latest)
+        # Usamos el motor más reciente de imágenes (DALL·E 3 / gpt-image-1)
         response = openai.images.generate(
-            model="gpt-image-1",  # Último motor de imágenes de OpenAI
+            model="gpt-image-1",   # Último motor de OpenAI
             prompt=prompt_text,
-            size="1024x1024",    # Alta resolución para logos profesionales
-            n=1,                 # Solo 1 imagen
+            size="1024x1024",      # Alta resolución
+            n=1,                   # Solo 1 imagen
             background="transparent"
         )
 
         # Extraemos la imagen
         image_b64 = response.data[0].b64_json
         img_bytes = base64.b64decode(image_b64)
-
-        return send_file(io.BytesIO(img_bytes), mimetype='image/png')
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# ------------------------------
-# Main
-# ------------------------------
-if __name__ == '__main__':
-    app.run(debug=True)
-
-
-# ------------------------------
-# Rutas Flask
-# ------------------------------
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/generate', methods=['POST'])
-def generate_logo():
-    title = request.form.get("title", "")
-    theme = request.form.get("theme", "")
-    element1 = request.files.get("element1")
-    element2 = request.files.get("element2")
-
-    prompt_text, user_images_base64 = build_logo_prompt(title, theme, [element1, element2])
-
-    try:
-        response = openai.Image.create(
-            prompt=prompt_text,
-            n=1,
-            size="1024x1024"  # Mayor resolución para logos profesionales
-        )
-
-        image_url = response['data'][0]['url']
-        img_response = requests.get(image_url)
-        img_bytes = img_response.content
 
         return send_file(io.BytesIO(img_bytes), mimetype='image/png')
 
