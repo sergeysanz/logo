@@ -15,17 +15,16 @@ app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # ------------------------------
-# Función para construir prompt conceptual/emocional
+# Función para construir prompt conceptual/emocional resumido
 # ------------------------------
 def build_logo_prompt(title, theme, uploaded_images):
     """
-    Prompt conceptual para generar un logo único:
-    - Interpreta insight y emoción de la palabra clave
-    - Una sola imagen
+    Prompt resumido para DALL·E (<1000 chars):
+    - Una sola imagen conceptual
     - Armonía, equilibrio y estética
-    - Referencias de usuario solo como guía conceptual (silueta/forma)
-    - Lineamientos internos de diseño: Principios de la Gestalt, lineamientos graficos del Kamon japones, proporciones, legibilidad, composición
-    - Corrientes artísticas asociadas a emoción o sentimiento
+    - Referencias de usuario solo como guía de silueta
+    - Lineamientos de Gestalt y Kamon (conceptual)
+    - Colores y estilo según emoción de la palabra clave
     """
     user_images_base64 = []
     for f in uploaded_images:
@@ -36,22 +35,18 @@ def build_logo_prompt(title, theme, uploaded_images):
             b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
             user_images_base64.append(b64)
 
+    # Prompt resumido <1000 chars
     prompt_text = f"""
-Crea un **logo único y conceptual** para la marca "{title}" basado en "{theme}".
-Entrega **una sola imagen limpia, armónica y estéticamente agradable**.
-Usa hasta 2 imágenes de referencia solo como guía de silueta o forma predominante, no superponer.
-Aplica principios de Gestalt: proximidad, similitud, cierre, figura-fondo, continuidad, pregnancia.
-Inspírate en técnicas de Kamon japonés (simetría radial, repetición concéntrica, armonía visual) solo como lineamiento conceptual.
-Adapta tipografía, formas y colores según emoción y significado de la palabra clave "{theme}":
-- rojo = pasión/energía
-- amarillo = alegría
-- azul = calma
-- morado = melancolía
-Usa corrientes artísticas asociadas a emoción o sentimiento (ej: monumentalismo, brutalismo, manierismo, hiperrealismo, eclecticismo, subvertising, etc.).
-Evita minimalismo estricto y copia literal de estilos.
-Asegura equilibrio visual, proporciones correctas, composición conceptual y legibilidad.
-Entrega un **logo final en PNG de alta calidad**.
+Crea un logo conceptual para la marca "{title}" basado en "{theme}".
+Entrega una sola imagen limpia y armoniosa.
+Usa hasta 2 imágenes de referencia solo como guía de silueta, sin superponer.
+Aplica Gestalt y técnicas de Kamon japonés solo como guía conceptual.
+Adapta tipografía, formas y colores según emoción de "{theme}".
+Evita minimalismo estricto y copiar estilos literalmente.
+Entrega un logo final en PNG de alta calidad.
 """
+    # Confirmamos que el prompt es <1000 caracteres
+    prompt_text = prompt_text.strip()
     return prompt_text, user_images_base64
 
 # ------------------------------
@@ -68,20 +63,16 @@ def generate_logo():
     element1 = request.files.get("element1")
     element2 = request.files.get("element2")
 
-    # Construir prompt
     prompt_text, user_images_base64 = build_logo_prompt(title, theme, [element1, element2])
 
     try:
-        # Generar imagen usando DALL·E
         response = openai.Image.create(
             prompt=prompt_text,
-            n=1,               # Solo 1 imagen
+            n=1,
             size="512x512"
         )
 
         image_url = response['data'][0]['url']
-
-        # Descargar imagen generada
         img_response = requests.get(image_url)
         img_bytes = img_response.content
 
