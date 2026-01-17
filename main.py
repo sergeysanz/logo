@@ -101,10 +101,10 @@ def generate_logo():
     img_bytes = None
     logo_error = None
 
-    # 2. Intentar generar logo
+    # 2. Intentar generar logo con DALL·E (alternativo a gpt-image-1)
     try:
         response = openai.Image.create(
-            model="gpt-image-1",
+            model="dall-e-3",  # Modelo alternativo
             prompt=logo_prompt,
             n=1,
             size="1024x1024",
@@ -114,12 +114,18 @@ def generate_logo():
         img_response = requests.get(image_url)
         img_bytes = img_response.content
     except Exception as e:
-        logo_error = f"No se pudo generar logo: {str(e)}"
+        logo_error = f"No se pudo generar logo dinámico: {str(e)}"
+        # Fallback: placeholder local
+        try:
+            with open("static/placeholder.png", "rb") as f:
+                img_bytes = f.read()
+        except Exception:
+            img_bytes = None
 
     # 3. Generar insight y estrategia
     brand_strategy = generate_brand_strategy(title, theme, target_gender, target_age_range)
 
-    # 4. Preparar respuesta
+    # 4. Preparar respuesta JSON
     result = {
         "logo": base64.b64encode(img_bytes).decode("utf-8") if img_bytes else None,
         "brand_strategy": brand_strategy,
