@@ -111,23 +111,30 @@ def generate_logo():
         )
         image_url = response['data'][0]['url']
         img_response = requests.get(image_url)
-        img_bytes = img_response.content
+        if img_response.status_code == 200:
+            img_bytes = img_response.content
+        else:
+            logo_error = f"No se pudo descargar la imagen, status code {img_response.status_code}"
     except Exception as e:
         logo_error = f"No se pudo generar logo dinámico: {str(e)}"
-        # Fallback: placeholder local
+
+    # 3. Fallback: placeholder local si falla
+    if not img_bytes:
         try:
             with open("static/placeholder.png", "rb") as f:
                 img_bytes = f.read()
+            logo_error = logo_error or "Se usó placeholder local porque falló la generación de logo."
         except Exception:
             img_bytes = None
+            logo_error = logo_error or "No hay imagen disponible."
 
-    # 3. Generar insight y estrategia de marca
+    # 4. Generar insight y estrategia de marca
     brand_strategy = generate_brand_strategy(title, theme, target_gender, target_age_range)
 
-    # 4. Preparar respuesta JSON
+    # 5. Preparar respuesta JSON segura
     result = {
         "logo": base64.b64encode(img_bytes).decode("utf-8") if img_bytes else None,
-        "brand_strategy": brand_strategy,
+        "brand_strategy": brand_strategy or "No se pudo generar la estrategia.",
         "error": logo_error
     }
 
