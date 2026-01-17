@@ -5,12 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Spicy Sauce — ALT SPICE Logo Generator 🌶️</title>
 
-<!-- Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
-
-<!-- CSS -->
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
 </head>
 <body>
 
@@ -37,24 +33,18 @@
         <form id="logoForm" enctype="multipart/form-data">
             <input type="text" name="title" placeholder="Nombre de tu marca" required>
             <textarea name="theme" placeholder="Describe tu marca o idea"></textarea>
-            
-            <!-- Campos para público objetivo -->
             <select name="gender">
                 <option value="mujer">Mujer</option>
                 <option value="hombre">Hombre</option>
                 <option value="todos">Todos</option>
             </select>
             <input type="text" name="age_range" placeholder="Rango de edad (ej: 18-35)">
-
             <label class="file-upload">
-                <input type="file" name="element1" accept="image/*">
-                + Subir Imagen 1
+                <input type="file" name="element1" accept="image/*"> + Subir Imagen 1
             </label>
             <label class="file-upload">
-                <input type="file" name="element2" accept="image/*">
-                + Subir Imagen 2
+                <input type="file" name="element2" accept="image/*"> + Subir Imagen 2
             </label>
-
             <button type="submit" class="btn-primary">Crear Logo</button>
         </form>
 
@@ -72,89 +62,6 @@
     </div>
 </div>
 
-<!-- JS -->
-// script.js
-
-document.addEventListener("DOMContentLoaded", function () {
-    const openPopupBtn = document.getElementById("openPopup");
-    const popup = document.getElementById("logoPopup");
-    const closePopup = document.querySelector(".popup .close");
-    const logoForm = document.getElementById("logoForm");
-    const generatedLogo = document.getElementById("generatedLogo");
-    const downloadBtn = document.getElementById("downloadBtn");
-
-    // Aquí se agregarán los campos de insight y estrategia
-    const insightDiv = document.createElement("p");
-    insightDiv.id = "brandInsight";
-    const strategyDiv = document.createElement("p");
-    strategyDiv.id = "brandStrategy";
-    logoForm.parentElement.appendChild(insightDiv);
-    logoForm.parentElement.appendChild(strategyDiv);
-
-    // Abrir popup
-    openPopupBtn.addEventListener("click", () => {
-        popup.style.display = "block";
-    });
-
-    // Cerrar popup
-    closePopup.addEventListener("click", () => {
-        popup.style.display = "none";
-    });
-
-    window.addEventListener("click", (e) => {
-        if (e.target == popup) {
-            popup.style.display = "none";
-        }
-    });
-
-    // Enviar formulario
-    logoForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const formData = new FormData(logoForm);
-
-        // Mostrar mensaje de carga
-        generatedLogo.src = "";
-        insightDiv.textContent = "Generando logo e ideas...";
-        strategyDiv.textContent = "";
-
-        try {
-            const response = await fetch("/generate", {
-                method: "POST",
-                body: formData
-            });
-
-            const data = await response.json();
-
-            if (data.error) {
-                insightDiv.textContent = "Error: " + data.error;
-                return;
-            }
-
-            // Mostrar logo
-            generatedLogo.src = "data:image/png;base64," + data.logo;
-
-            // Mostrar insight / lema
-            insightDiv.textContent = "Insight / Lema: " + data.brand_insight;
-
-            // Mostrar estrategia de marketing
-            strategyDiv.textContent = "Estrategia: " + data.brand_strategy;
-
-            // Configurar botón de descarga
-            downloadBtn.onclick = () => {
-                const a = document.createElement("a");
-                a.href = generatedLogo.src;
-                a.download = "logo.png";
-                a.click();
-            };
-
-        } catch (err) {
-            insightDiv.textContent = "Error al generar el logo: " + err.message;
-        }
-    });
-});
-
-</script>
-
+<script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
