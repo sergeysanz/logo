@@ -25,7 +25,7 @@ def build_logo_prompt(title, theme, uploaded_images):
                 img = Image.open(f.stream)
                 buf = io.BytesIO()
                 img.save(buf, format='PNG')
-                # Solo para referencia en el prompt, no necesitamos base64
+                # Solo para referencia en el prompt
                 reference_text += f" Puedes usar la imagen {idx} como inspiración de forma y silueta."
             except Exception:
                 continue
@@ -76,6 +76,7 @@ def index():
 @app.route('/generate', methods=['POST'])
 def generate_logo():
     try:
+        # Obtener datos del formulario
         title = request.form.get("title", "").strip()
         theme = request.form.get("theme", "").strip()
         target_gender = request.form.get("gender", "mujer")
@@ -142,7 +143,7 @@ def generate_logo():
         })
 
     except Exception as e:
-        # Garantiza que siempre devolvemos JSON
+        # Siempre devolver JSON aunque ocurra un error inesperado
         return jsonify({
             "logo": None,
             "brand_strategy": None,
