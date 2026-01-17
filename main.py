@@ -25,7 +25,7 @@ def build_logo_prompt(title, theme, uploaded_images):
                 img = Image.open(f.stream)
                 buf = io.BytesIO()
                 img.save(buf, format='PNG')
-                # No necesitamos el base64, solo para referencia en el prompt
+                # Solo para referencia en el prompt, no necesitamos base64
                 reference_text += f" Puedes usar la imagen {idx} como inspiración de forma y silueta."
             except Exception:
                 continue
@@ -75,67 +75,79 @@ def index():
 
 @app.route('/generate', methods=['POST'])
 def generate_logo():
-    title = request.form.get("title", "")
-    theme = request.form.get("theme", "")
-    target_gender = request.form.get("gender", "mujer")
-    target_age_range = request.form.get("age_range", "18-35")
-    element1 = request.files.get("element1")
-    element2 = request.files.get("element2")
-
-    logo_prompt = build_logo_prompt(title, theme, [element1, element2])
-
-    img_bytes = None
-    logo_error = None
-
-    # ------------------------------
-    # Intentar generar logo con DALL·E 3
-    # ------------------------------
     try:
-        response = openai.Image.create(
-            model="dall-e-3",
-            prompt=logo_prompt,
-            n=1,
-            size="1024x1024"
-        )
-        image_url = response['data'][0].get('url')
-        if image_url:
-            img_response = requests.get(image_url, timeout=15)
-            if img_response.status_code == 200:
-                img_bytes = img_response.content
-            else:
-                logo_error = f"No se pudo descargar la imagen, status code {img_response.status_code}"
-        else:
-            logo_error = "No se obtuvo URL de la imagen desde la API."
-    except Exception as e:
-        logo_error = f"No se pudo generar logo dinámico: {str(e)}"
+        title = request.form.get("title", "").strip()
+        theme = request.form.get("theme", "").strip()
+        target_gender = request.form.get("gender", "mujer")
+        target_age_range = request.form.get("age_range", "18-35")
+        element1 = request.files.get("element1")
+        element2 = request.files.get("element2")
 
-    # ------------------------------
-    # Fallback: usar placeholder local
-    # ------------------------------
-    if not img_bytes:
+        logo_prompt = build_logo_prompt(title, theme, [element1, element2])
+
+        img_bytes = None
+        logo_error = None
+
+        # ------------------------------
+        # Generar logo con DALL·E 3
+        # ------------------------------
         try:
-            with open("static/placeholder.png", "rb") as f:
-                img_bytes = f.read()
-            logo_error = logo_error or "Se usó placeholder local porque falló la generación de logo."
-        except Exception:
-            img_bytes = None
-            logo_error = logo_error or "No hay imagen disponible."
+            response = openai.Image.create(
+                model="dall-e-3",
+                prompt=logo_prompt,
+                n=1,
+                size="1024x1024"
+            )
+            image_url = response['data'][0].get('url')
+            if image_url:
+                img_response = requests.get(image_url, timeout=30)
+                if img_response.status_code == 200:
+                    img_bytes = img_response.content
+                else:
+                    logo_error = f"No se pudo descargar la imagen, status code {img_response.status_code}"
+            else:
+                logo_error = "No se obtuvo URL de la imagen desde la API."
+        except Exception as e:
+            logo_error = f"No se pudo generar logo dinámico: {str(e)}"
 
-    # ------------------------------
-    # Generar insight y estrategia de marca
-    # ------------------------------
-    brand_strategy = generate_brand_strategy(title, theme, target_gender, target_age_range)
-    if not brand_strategy:
-        brand_strategy = "No se pudo generar la estrategia."
+        # ------------------------------
+        # Fallback: usar placeholder local
+        # ------------------------------
+        if not img_bytes:
+            try:
+                with open("static/placeholder.png", "rb") as f:
+                    img_bytes = f.read()
+                logo_error = logo_error or "Se usó placeholder local porque falló la generación de logo."
+            except Exception:
+                img_bytes = None
+                logo_error = logo_error or "No hay imagen disponible."
 
-    # ------------------------------
-    # Respuesta JSON segura
-    # ------------------------------
-    return jsonify({
-        "logo": base64.b64encode(img_bytes).decode("utf-8") if img_bytes else None,
-        "brand_strategy": brand_strategy,
-        "error": logo_error
-    })
+        # ------------------------------
+        # Generar insight y estrategia de marca
+        # ------------------------------
+        try:
+            brand_strategy = generate_brand_strategy(title, theme, target_gender, target_age_range)
+            if not brand_strategy:
+                brand_strategy = "No se pudo generar la estrategia."
+        except Exception as e:
+            brand_strategy = f"Error generando estrategia: {str(e)}"
+
+        # ------------------------------
+        # Respuesta JSON segura
+        # ------------------------------
+        return jsonify({
+            "logo": base64.b64encode(img_bytes).decode("utf-8") if img_bytes else None,
+            "brand_strategy": brand_strategy,
+            "error": logo_error
+        })
+
+    except Exception as e:
+        # Garantiza que siempre devolvemos JSON
+        return jsonify({
+            "logo": None,
+            "brand_strategy": None,
+            "error": f"Error inesperado: {str(e)}"
+        })
 
 # ------------------------------
 # Main
