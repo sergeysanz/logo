@@ -1,152 +1,109 @@
+import os
+import io
+import base64
 from flask import Flask, render_template, request, send_file, jsonify
-from io import BytesIO
 from PIL import Image
+from dotenv import load_dotenv
+import openai
+
+# Carga variables de entorno
+load_dotenv()
 
 app = Flask(__name__)
+openai.api_key = os.getenv("OPENAI_API_KEY")  # tu API Key de OpenAI
 
-# Control de creación por usuario/IP
-created_logos = {}
+# ------------------------------
+# Función para construir prompt
+# ------------------------------
+def build_logo_prompt(title, theme, uploaded_images, corpus_dir="corpus"):
+    """
+    Construye un prompt avanzado para GPT considerando:
+    - Principios de Gestalt
+    - Técnicas Kamon japonesas
+    - Consulta a corpus de estilos (1-8)
+    """
+    # Convertir imágenes subidas a base64
+    user_images_base64 = []
+    for f in uploaded_images:
+        if f:
+            img = Image.open(f.stream)
+            buf = io.BytesIO()
+            img.save(buf, format='PNG')
+            b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+            user_images_base64.append(b64)
 
-# Carpeta corpus
-CORPUS_FOLDER = "corpus"
+    # Leer corpus de estilo
+    corpus_images_base64 = []
+    if os.path.exists(corpus_dir):
+        for folder in sorted(os.listdir(corpus_dir)):
+            folder_path = os.path.join(corpus_dir, folder)
+            if os.path.isdir(folder_path):
+                for step in ["a.png", "b.png", "c.png"]:
+                    img_path = os.path.join(folder_path, step)
+                    if os.path.exists(img_path):
+                        with open(img_path, "rb") as f:
+                            b64 = base64.b64encode(f.read()).decode("utf-8")
+                            corpus_images_base64.append(b64)
 
-def build_logo_json(title, style_corpus, theme, uploaded_elements):
-    elements_features = []
-    for i, elem in enumerate(uploaded_elements):
-        if elem:
-            features = {
-                "filename": elem.filename,
-                "layer": i+1,
-                "gestalt": ["figura_fondo","cierre"] if i == 0 else ["proximidad","similitud"],
-                "simplification": "geometrica"
-            }
-            elements_features.append(features)
-
-    logo_json = {
-        "brand": {
-            "name": title,
-            "industry": theme.get("industry", "general"),
-            "values": theme.get("values", [])
-        },
-        "logo_specs": {
-            "type": "iconic",
-            "format": "vector",
-            "colors": theme.get("colors", ["#1B998B", "#E6F0EA"]),
-            "style": theme.get("style", "minimalista, elegante, geométrico")
-        },
-        "composition": {
-            "elements": elements_features,
-            "radial_mesh": {
-                "layers": 2,
-                "sectors": 5,
-                "radius": 100,
-                "concentric_divisions": [50,80]
-            },
-            "rules": {
-                "symmetry": "radial",
-                "proportions": "armonicos, regla_aurica",
-                "balance": "visual"
-            }
-        },
-        "typography": {
-            "integration": True,
-            "letters_in_icon": True,
-            "style": "geométrica, minimalista"
-        },
-        "gestalt_principles": ["proximidad","similitud","continuidad","cierre","figura_fondo","pregnancia"],
-        "output_instructions": {
-            "file_type": "SVG",
-            "scalable": True,
-            "space_negative": True,
-            "minimalism": True,
-            "readability": "alta"
-        },
-        "creative_instructions": {
-            "merge_elements": True,
-            "abstract_shapes": True,
-            "harmonic_arrangement": True,
-            "repetition": "radial o concéntrica",
-            "simplification": "maxima pero reconocible"
-        },
-        "style_corpus": style_corpus
-    }
-
-    return logo_json
-
-def generate_prompt_from_json(logo_json):
-    brand = logo_json["brand"]
-    specs = logo_json["logo_specs"]
-    comp = logo_json["composition"]
-    gestalt = logo_json["gestalt_principles"]
-    creative = logo_json["creative_instructions"]
-
-    prompt = f"""
-Crea un logo minimalista y elegante para la marca {brand['name']}, enfocada en {brand['industry']} y con valores {', '.join(brand['values'])}.
-El diseño debe ser {specs['style']} en formato {specs['format']} con colores {', '.join(specs['colors'])}.
-
-Elementos principales:
+    # Construir prompt textual
+    prompt_text = f"""
+Genera un logo minimalista, armónico y creativo para la marca: {title}.
+Tema de la marca: {theme}.
+Usa hasta 2 imágenes de referencia del usuario.
+Consulta {len(corpus_images_base64)} imágenes del corpus de estilos como inspiración.
+Aplica principios de Gestalt: proximidad, similitud, cierre, figura-fondo, pregnancia, continuidad.
+Aplica técnicas de Kamon japonés: simetría radial, repetición concéntrica, armonía visual.
+Integra las letras de la marca dentro del icono de manera geométrica y estilizada.
+Mantén proporciones armónicas, espacio negativo suficiente y legibilidad.
+Devuelve el resultado en formato PNG codificado en base64.
+No incluyas instrucciones de texto, solo la imagen codificada.
 """
-    for el in comp["elements"]:
-        prompt += f"- {el['filename']}, capa {el['layer']}, simplificación {el['simplification']}, aplicando Gestalt: {', '.join(el['gestalt'])}\n"
+    return prompt_text, user_images_base64, corpus_images_base64
 
-    prompt += f"""
-Organiza los elementos con malla radial de {comp['radial_mesh']['layers']} capas y {comp['radial_mesh']['sectors']} sectores,
-simetría {comp['rules']['symmetry']}, proporciones {comp['rules']['proportions']}, balance {comp['rules']['balance']}.
-
-Integrar tipografía geométrica y minimalista dentro de los elementos si es necesario.
-
-Aplicar principios Gestalt: {', '.join(gestalt)}.
-
-Seguir instrucciones creativas: {', '.join([f'{k}: {v}' for k,v in creative.items()])}.
-
-Resultado escalable, vectorial, con espacio negativo y legible.
-"""
-    return prompt.strip()
-
-def generate_logo_image(prompt_text):
-    img = Image.new("RGBA", (1024,1024), (255,255,255,0))
-    return img
-
+# ------------------------------
+# Rutas Flask
+# ------------------------------
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/generate', methods=['POST'])
-def generate():
-    user_ip = request.remote_addr
-
-    title = request.form.get("title","").strip()
-    theme_text = request.form.get("theme","")
-    style_corpus = request.form.getlist("style_corpus") or ["estilo1"]
-
+def generate_logo():
+    title = request.form.get("title", "")
+    theme = request.form.get("theme", "")
     element1 = request.files.get("element1")
     element2 = request.files.get("element2")
-    uploaded_elements = [element1, element2]
 
-    if not title:
-        return jsonify({"error":"Title is required"}),400
+    # Generar prompt avanzado
+    prompt_text, user_images_base64, corpus_images_base64 = build_logo_prompt(
+        title, theme, [element1, element2]
+    )
 
-    if user_ip in created_logos and created_logos[user_ip] == title:
-        return jsonify({"error":"Logo already created for this title"}),403
+    try:
+        # Llamada a OpenAI GPT
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role":"user", "content": prompt_text}],
+            temperature=0.8
+        )
 
-    theme = {
-        "industry": "sostenibilidad y medio ambiente",
-        "values": theme_text.split(",") if theme_text else ["naturaleza","innovación","armonía"],
-        "colors": ["#1B998B", "#E6F0EA"],
-        "style": "minimalista, elegante, geométrico"
-    }
+        # GPT devuelve base64 de la imagen
+        result_text = response.choices[0].message.content.strip()
+        if "data:image/png;base64," in result_text:
+            base64_data = result_text.split("data:image/png;base64,")[1]
+            img_bytes = base64.b64decode(base64_data)
+            return send_file(io.BytesIO(img_bytes), mimetype='image/png')
+        else:
+            # fallback: imagen blanca de 400x400
+            img = Image.new('RGB', (400, 400), color=(255, 255, 255))
+            buf = io.BytesIO()
+            img.save(buf, format='PNG')
+            buf.seek(0)
+            return send_file(buf, mimetype='image/png')
 
-    logo_json = build_logo_json(title, style_corpus, theme, uploaded_elements)
-    prompt_text = generate_prompt_from_json(logo_json)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    logo_img = generate_logo_image(prompt_text)
-
-    created_logos[user_ip] = title
-
-    img_io = BytesIO()
-    logo_img.save(img_io, 'PNG')
-    img_io.seek(0)
-    return send_file(img_io, mimetype='image/png', download_name=f"{title}.png")
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(debug=True)
