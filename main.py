@@ -1,14 +1,16 @@
 import os
 import io
 import base64
+import requests
 from flask import Flask, render_template, request, send_file, jsonify
 from PIL import Image
 from dotenv import load_dotenv
 import openai
 
+# ------------------------------
 # Carga variables de entorno
+# ------------------------------
 load_dotenv()
-
 app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")  # tu API Key de OpenAI
 
@@ -17,7 +19,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")  # tu API Key de OpenAI
 # ------------------------------
 def build_logo_prompt(title, theme, uploaded_images, corpus_dir="corpus"):
     """
-    Construye un prompt avanzado para GPT considerando:
+    Construye un prompt avanzado para DALL·E considerando:
     - Principios de Gestalt
     - Técnicas Kamon japonesas
     - Consulta a corpus de estilos (1-8)
@@ -55,8 +57,7 @@ Aplica principios de Gestalt: proximidad, similitud, cierre, figura-fondo, pregn
 Aplica técnicas de Kamon japonés: simetría radial, repetición concéntrica, armonía visual.
 Integra las letras de la marca dentro del icono de manera geométrica y estilizada.
 Mantén proporciones armónicas, espacio negativo suficiente y legibilidad.
-Devuelve el resultado en formato PNG codificado en base64.
-No incluyas instrucciones de texto, solo la imagen codificada.
+Devuelve la imagen en formato PNG de alta calidad.
 """
     return prompt_text, user_images_base64, corpus_images_base64
 
@@ -74,36 +75,33 @@ def generate_logo():
     element1 = request.files.get("element1")
     element2 = request.files.get("element2")
 
-    # Generar prompt avanzado
+    # Generar prompt
     prompt_text, user_images_base64, corpus_images_base64 = build_logo_prompt(
         title, theme, [element1, element2]
     )
 
     try:
-        # Llamada a OpenAI GPT
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role":"user", "content": prompt_text}],
-            temperature=0.8
+        # Generar imagen usando DALL·E
+        response = openai.Image.create(
+            prompt=prompt_text,
+            n=1,
+            size="512x512"
         )
 
-        # GPT devuelve base64 de la imagen
-        result_text = response.choices[0].message.content.strip()
-        if "data:image/png;base64," in result_text:
-            base64_data = result_text.split("data:image/png;base64,")[1]
-            img_bytes = base64.b64decode(base64_data)
-            return send_file(io.BytesIO(img_bytes), mimetype='image/png')
-        else:
-            # fallback: imagen blanca de 400x400
-            img = Image.new('RGB', (400, 400), color=(255, 255, 255))
-            buf = io.BytesIO()
-            img.save(buf, format='PNG')
-            buf.seek(0)
-            return send_file(buf, mimetype='image/png')
+        image_url = response['data'][0]['url']
+
+        # Descargar la imagen generada
+        img_response = requests.get(image_url)
+        img_bytes = img_response.content
+
+        return send_file(io.BytesIO(img_bytes), mimetype='image/png')
 
     except Exception as e:
+        # En caso de error, enviar mensaje JSON
         return jsonify({"error": str(e)}), 500
 
-
+# ------------------------------
+# Main
+# ------------------------------
 if __name__ == '__main__':
     app.run(debug=True)
