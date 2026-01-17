@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Generador de Logos Gestalt</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<h1>Generador de Logos Creativos</h1>
+
+<form id="logoForm" enctype="multipart/form-data">
+<input type="text" name="title" placeholder="Nombre de la marca" required>
+<input type="text" name="theme" placeholder="Valores separados por coma">
+<select name="style_corpus" multiple>
+  <option value="estilo1">Estilo 1</option>
+  <option value="estilo2">Estilo 2</option>
+  <option value="estilo3">Estilo 3</option>
+  <option value="estilo4">Estilo 4</option>
+  <option value="estilo5">Estilo 5</option>
+  <option value="estilo6">Estilo 6</option>
+  <option value="estilo7">Estilo 7</option>
+  <option value="estilo8">Estilo 8</option>
+</select>
+<input type="file" name="element1" accept="image/*">
+<input type="file" name="element2" accept="image/*">
+<button type="submit">Generar Logo</button>
+</form>
+
+<div id="logoPopup">
+<img id="generatedLogo">
+<br>
+<button onclick="downloadLogo()">Descargar</button>
+<button onclick="closePopup()">Cerrar</button>
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
