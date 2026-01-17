@@ -17,16 +17,14 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 # ------------------------------
 # Función para construir prompt conceptual/emocional resumido
 # ------------------------------
-
 def build_logo_prompt(title, theme, uploaded_images):
     """
-    Prompt conceptual avanzado para DALL·E (<1000 chars):
-    - Branding creativo basado en insight y emoción
-    - Diseño especulativo y equilibrio visual
-    - Una sola imagen final
-    - Referencias de usuario solo como guía de silueta
-    - Lineamientos de Gestalt y Kamon
-    - Corrientes artísticas según emoción o palabra clave
+    Prompt avanzado para generar logos profesionales:
+    - Se basa en siluetas y formas de imágenes de referencia
+    - Transformación a abstracción minimalista
+    - Una sola imagen final coherente y armoniosa
+    - Principios de Gestalt aplicados para equilibrio visual
+    - Adaptable a web e impresión
     """
 
     user_images_base64 = []
@@ -39,20 +37,18 @@ def build_logo_prompt(title, theme, uploaded_images):
             user_images_base64.append(b64)
 
     prompt_text = f"""
-Crea un logo conceptual para la marca "{title}" basado en "{theme}".
-Entrega una sola imagen armoniosa y estéticamente equilibrada.
-Usa hasta 2 imágenes de referencia solo como guía de silueta, sin superponer.
-Aplica principios de Gestalt y lineamientos del Kamon japonés como guía conceptual.
-Interpreta la emoción y significado de la palabra clave "{theme}" para colores, tipografía y formas.
-Selecciona corrientes artísticas apropiadas según emoción (ej: monumentalismo, brutalismo, manierismo, hiperrealismo, eclecticismo, subvertising).
-Aplica diseño especulativo de cuadrantes prospectivos para explorar estilos y conceptos innovadores.
-Evita minimalismo estricto y copia literal de estilos.
-Entrega un logo final en PNG de alta calidad.
+Crea un logo profesional para la marca "{title}" basado en "{theme}".
+Usa las formas y siluetas de las imágenes de referencia como guía conceptual, 
+transformándolas en una abstracción minimalista y armoniosa.
+Fusiona los elementos de manera equilibrada, aplicando principios de Gestalt 
+(simetría, cierre, figura-fondo, continuidad, proximidad).
+Entrega una sola imagen final coherente, elegante, legible y escalable.
+El resultado debe ser adaptable a web e impresión, con fondo transparente, 
+evitando exceso de detalle, estilos infantiles o efectos innecesarios.
 """
     # Confirmamos que el prompt es <1000 caracteres
-    prompt_text = prompt_text.strip()[:995]  # deja margen por si acaso
+    prompt_text = prompt_text.strip()[:995]
     return prompt_text, user_images_base64
-
 
 # ------------------------------
 # Rutas Flask
@@ -74,7 +70,7 @@ def generate_logo():
         response = openai.Image.create(
             prompt=prompt_text,
             n=1,
-            size="512x512"
+            size="1024x1024"  # Mayor resolución para logos profesionales
         )
 
         image_url = response['data'][0]['url']
