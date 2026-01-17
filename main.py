@@ -8,20 +8,20 @@ from dotenv import load_dotenv
 import openai
 
 # ------------------------------
-# Carga variables de entorno
+# Configuración inicial
 # ------------------------------
 load_dotenv()
 app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # ------------------------------
-# Función para construir prompt profesional para logos
+# Función: Construir prompt para logo
 # ------------------------------
 def build_logo_prompt(title, theme, uploaded_images):
     """
     Prompt profesional para generar logos:
     - Una sola imagen final
-    - Basado en texto y opcionalmente en imágenes de referencia
+    - Basado en texto y opcionalmente imágenes de referencia
     - Abstracción minimalista y limpia
     - Principios de Gestalt aplicados
     """
@@ -49,14 +49,14 @@ Fondo transparente, sin texturas ni efectos innecesarios, con líneas y formas d
     return prompt_text
 
 # ------------------------------
-# Función para generar insights y estrategia
+# Función: Generar insight y estrategia de marca
 # ------------------------------
 def generate_brand_strategy(title, theme, target_gender, target_age_range):
     """
     Genera:
     - Lema corto o insight de marca
-    - Estrategia de comunicación y marketing para redes sociales y eventos
-    - Identificación del grupo generacional y rasgos de personalidad
+    - Estrategia de marketing para redes sociales y eventos
+    - Identificación de grupo generacional y rasgos de personalidad
     """
     prompt_text = f"""
 Eres un experto en branding y marketing. 
@@ -75,10 +75,9 @@ Entrega la información de forma clara y organizada.
             messages=[{"role": "user", "content": prompt_text}],
             max_tokens=500
         )
-        content = response.choices[0].message['content']
-        return content
+        return response.choices[0].message['content']
     except Exception as e:
-        return str(e)
+        return f"Error generando estrategia: {str(e)}"
 
 # ------------------------------
 # Rutas Flask
@@ -96,10 +95,13 @@ def generate_logo():
     element1 = request.files.get("element1")
     element2 = request.files.get("element2")
 
-    # Genera prompt para logo
+    # 1. Generar prompt para logo
     logo_prompt = build_logo_prompt(title, theme, [element1, element2])
 
-    # Genera logo
+    img_bytes = None
+    logo_error = None
+
+    # 2. Intentar generar logo
     try:
         response = openai.Image.create(
             model="gpt-image-1",
@@ -112,16 +114,19 @@ def generate_logo():
         img_response = requests.get(image_url)
         img_bytes = img_response.content
     except Exception as e:
-        return jsonify({"error": f"Error generando logo: {str(e)}"}), 500
+        logo_error = f"No se pudo generar logo: {str(e)}"
 
-    # Genera estrategia de marca e insight
+    # 3. Generar insight y estrategia
     brand_strategy = generate_brand_strategy(title, theme, target_gender, target_age_range)
 
-    # Retornamos todo en JSON
-    return jsonify({
-        "logo": base64.b64encode(img_bytes).decode("utf-8"),
-        "brand_strategy": brand_strategy
-    })
+    # 4. Preparar respuesta
+    result = {
+        "logo": base64.b64encode(img_bytes).decode("utf-8") if img_bytes else None,
+        "brand_strategy": brand_strategy,
+        "error": logo_error
+    }
+
+    return jsonify(result)
 
 # ------------------------------
 # Main
