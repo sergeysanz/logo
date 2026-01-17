@@ -17,15 +17,18 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 # ------------------------------
 # Función para construir prompt conceptual/emocional resumido
 # ------------------------------
+
 def build_logo_prompt(title, theme, uploaded_images):
     """
-    Prompt resumido para DALL·E (<1000 chars):
-    - Una sola imagen conceptual
-    - Armonía, equilibrio y estética
+    Prompt conceptual avanzado para DALL·E (<1000 chars):
+    - Branding creativo basado en insight y emoción
+    - Diseño especulativo y equilibrio visual
+    - Una sola imagen final
     - Referencias de usuario solo como guía de silueta
-    - Lineamientos de Gestalt y Kamon (conceptual)
-    - Colores y estilo según emoción de la palabra clave
+    - Lineamientos de Gestalt y Kamon
+    - Corrientes artísticas según emoción o palabra clave
     """
+
     user_images_base64 = []
     for f in uploaded_images:
         if f:
@@ -35,19 +38,21 @@ def build_logo_prompt(title, theme, uploaded_images):
             b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
             user_images_base64.append(b64)
 
-    # Prompt resumido <1000 chars
     prompt_text = f"""
 Crea un logo conceptual para la marca "{title}" basado en "{theme}".
-Entrega una sola imagen limpia y armoniosa.
+Entrega una sola imagen armoniosa y estéticamente equilibrada.
 Usa hasta 2 imágenes de referencia solo como guía de silueta, sin superponer.
-Aplica Gestalt y técnicas de Kamon japonés solo como guía conceptual.
-Adapta tipografía, formas y colores según emoción de "{theme}".
-Evita minimalismo estricto y copiar estilos literalmente.
+Aplica principios de Gestalt y lineamientos del Kamon japonés como guía conceptual.
+Interpreta la emoción y significado de la palabra clave "{theme}" para colores, tipografía y formas.
+Selecciona corrientes artísticas apropiadas según emoción (ej: monumentalismo, brutalismo, manierismo, hiperrealismo, eclecticismo, subvertising).
+Aplica diseño especulativo de cuadrantes prospectivos para explorar estilos y conceptos innovadores.
+Evita minimalismo estricto y copia literal de estilos.
 Entrega un logo final en PNG de alta calidad.
 """
     # Confirmamos que el prompt es <1000 caracteres
-    prompt_text = prompt_text.strip()
+    prompt_text = prompt_text.strip()[:995]  # deja margen por si acaso
     return prompt_text, user_images_base64
+
 
 # ------------------------------
 # Rutas Flask
