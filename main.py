@@ -2,7 +2,7 @@ import os
 import io
 import base64
 import requests
-from flask import Flask, render_template, request, send_file, jsonify
+from flask import Flask, render_template, request, jsonify
 from PIL import Image
 from dotenv import load_dotenv
 import openai
@@ -62,16 +62,16 @@ def generate_brand_strategy(title, theme, target_gender, target_age_range):
 Eres un experto en branding y marketing. 
 Crea para la marca "{title}" con el tema "{theme}" lo siguiente:
 
-1. Un lema o insight corto y poderoso para la marca.
-2. Estrategia de marketing digital para redes sociales y eventos.
-3. Identifica el público objetivo: género {target_gender}, edad {target_age_range}, grupo generacional, y rasgos de personalidad.
-4. Sugiere mensajes y tono de comunicación más efectivos para ese grupo generacional.
+1. Un lema o insight corto y poderoso para la marca. Debe apelar a sentimientos, ser metafórico y breve, como "como caminar en el agua".
+2. Estrategia de marketing digital para redes sociales y eventos, adaptada a mujeres de edad {target_age_range}.
+3. Identifica el grupo generacional y los rasgos de personalidad típicos.
+4. Sugiere mensajes, tono y estilo de comunicación más efectivos.
 
 Entrega la información de forma clara y organizada.
 """
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-4",  # Modelo más potente para texto
+            model="gpt-4",
             messages=[{"role": "user", "content": prompt_text}],
             max_tokens=500
         )
@@ -105,7 +105,8 @@ def generate_logo():
             model="gpt-image-1",
             prompt=logo_prompt,
             n=1,
-            size="1024x1024"
+            size="1024x1024",
+            background="transparent"
         )
         image_url = response['data'][0]['url']
         img_response = requests.get(image_url)
