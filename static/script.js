@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Abrir popup
     openPopupBtn.addEventListener("click", () => {
-        popup.style.display = "block";
+        popup.style.display = "flex"; // mostrar popup
     });
 
     // Cerrar popup
@@ -41,22 +41,28 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if (data.error) {
                 insightDiv.textContent = "Error: " + data.error;
+                strategyDiv.textContent = "";
                 return;
             }
 
+            // Mostrar logo
             generatedLogo.src = "data:image/png;base64," + data.logo;
 
+            // Mostrar insight y estrategia
             insightDiv.textContent = "Insight / Lema: " + data.brand_strategy.split("\n")[0];
             strategyDiv.textContent = data.brand_strategy;
 
+            // Descargar logo
             downloadBtn.onclick = () => {
                 const a = document.createElement("a");
                 a.href = generatedLogo.src;
                 a.download = "logo.png";
                 a.click();
             };
+
         } catch (err) {
             insightDiv.textContent = "Error al generar el logo: " + err.message;
+            strategyDiv.textContent = "";
         }
     });
 });
