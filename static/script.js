@@ -1,53 +1,80 @@
-const openPopupBtn = document.getElementById('openPopup');
-const popup = document.getElementById('logoPopup');
-const closeBtn = popup.querySelector('.close');
-const form = document.getElementById('logoForm');
-const generatedLogo = document.getElementById('generatedLogo');
-const downloadBtn = document.getElementById('downloadBtn');
+// script.js
 
-// Animación inicial GSAP
-gsap.from(".logo", {opacity:0, y:-50, duration:1, ease:"power2.out"});
-gsap.from(".site-title", {opacity:0, y:-20, delay:0.5, duration:1, ease:"power2.out"});
-gsap.from(".hero-title", {opacity:0, y:30, delay:1, duration:1, ease:"power2.out"});
-gsap.from(".hero-text", {opacity:0, y:30, delay:1.2, duration:1, ease:"power2.out"});
-gsap.from(".btn-primary", {opacity:0, scale:0.8, delay:1.5, duration:0.8, ease:"back.out(1.7)"});
+document.addEventListener("DOMContentLoaded", function () {
+    const openPopupBtn = document.getElementById("openPopup");
+    const popup = document.getElementById("logoPopup");
+    const closePopup = document.querySelector(".popup .close");
+    const logoForm = document.getElementById("logoForm");
+    const generatedLogo = document.getElementById("generatedLogo");
+    const downloadBtn = document.getElementById("downloadBtn");
 
-// Abrir popup
-openPopupBtn.addEventListener('click', () => {
-    popup.style.display = 'flex';
-    gsap.to(".popup-content", {opacity:1, y:0, duration:0.5, ease:"power2.out"});
-});
+    // Aquí se agregarán los campos de insight y estrategia
+    const insightDiv = document.createElement("p");
+    insightDiv.id = "brandInsight";
+    const strategyDiv = document.createElement("p");
+    strategyDiv.id = "brandStrategy";
+    logoForm.parentElement.appendChild(insightDiv);
+    logoForm.parentElement.appendChild(strategyDiv);
 
-// Cerrar popup
-closeBtn.addEventListener('click', () => {
-    gsap.to(".popup-content", {opacity:0, y:-50, duration:0.3, ease:"power2.in", onComplete:()=>{popup.style.display='none';}});
-});
+    // Abrir popup
+    openPopupBtn.addEventListener("click", () => {
+        popup.style.display = "block";
+    });
 
-// Formulario
-form.addEventListener('submit', function(e){
-    e.preventDefault();
-    const formData = new FormData(this);
+    // Cerrar popup
+    closePopup.addEventListener("click", () => {
+        popup.style.display = "none";
+    });
 
-    fetch('/generate',{
-        method:'POST',
-        body: formData
-    })
-    .then(res => {
-        if(!res.ok) return res.json().then(err => {throw new Error(err.error)});
-        return res.blob();
-    })
-    .then(blob => {
-        const url = URL.createObjectURL(blob);
-        generatedLogo.src = url;
-        gsap.to(".result", {opacity:1, duration:0.5});
-    })
-    .catch(err => alert(err));
-});
+    window.addEventListener("click", (e) => {
+        if (e.target == popup) {
+            popup.style.display = "none";
+        }
+    });
 
-// Descargar logo
-downloadBtn.addEventListener('click', () => {
-    const a = document.createElement('a');
-    a.href = generatedLogo.src;
-    a.download = 'logo.png';
-    a.click();
+    // Enviar formulario
+    logoForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(logoForm);
+
+        // Mostrar mensaje de carga
+        generatedLogo.src = "";
+        insightDiv.textContent = "Generando logo e ideas...";
+        strategyDiv.textContent = "";
+
+        try {
+            const response = await fetch("/generate", {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                insightDiv.textContent = "Error: " + data.error;
+                return;
+            }
+
+            // Mostrar logo
+            generatedLogo.src = "data:image/png;base64," + data.logo;
+
+            // Mostrar insight / lema
+            insightDiv.textContent = "Insight / Lema: " + data.brand_insight;
+
+            // Mostrar estrategia de marketing
+            strategyDiv.textContent = "Estrategia: " + data.brand_strategy;
+
+            // Configurar botón de descarga
+            downloadBtn.onclick = () => {
+                const a = document.createElement("a");
+                a.href = generatedLogo.src;
+                a.download = "logo.png";
+                a.click();
+            };
+
+        } catch (err) {
+            insightDiv.textContent = "Error al generar el logo: " + err.message;
+        }
+    });
 });
