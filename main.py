@@ -19,13 +19,12 @@ openai.api_key = os.getenv("OPENAI_API_KEY")  # tu API Key de OpenAI
 # ------------------------------
 def build_logo_prompt(title, theme, uploaded_images, corpus_dir="corpus"):
     """
-    Construye un prompt avanzado para generar un logo conceptual:
+    Prompt optimizado para generar un logo conceptual:
     - Principios de Gestalt
-    - Técnicas Kamon japonesas
-    - Consulta a corpus de estilos (1-8)
-    - Recursividad creativa basada en palabra clave y emoción
+    - Técnicas Kamon
+    - Referencias de usuario y corpus
+    - Concepto emocional basado en palabra clave
     """
-    # Convertir imágenes subidas a base64
     user_images_base64 = []
     for f in uploaded_images:
         if f:
@@ -35,42 +34,30 @@ def build_logo_prompt(title, theme, uploaded_images, corpus_dir="corpus"):
             b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
             user_images_base64.append(b64)
 
-    # Leer corpus de estilo
     corpus_images_base64 = []
     if os.path.exists(corpus_dir):
         for folder in sorted(os.listdir(corpus_dir)):
             folder_path = os.path.join(corpus_dir, folder)
             if os.path.isdir(folder_path):
-                for step in ["a.png", "b.png", "c.png"]:
+                for step in ["a.png","b.png","c.png"]:
                     img_path = os.path.join(folder_path, step)
                     if os.path.exists(img_path):
-                        with open(img_path, "rb") as f:
+                        with open(img_path,"rb") as f:
                             b64 = base64.b64encode(f.read()).decode("utf-8")
                             corpus_images_base64.append(b64)
 
-    # Construir prompt textual
+    # Prompt optimizado <1000 chars
     prompt_text = f"""
-Genera **una única imagen de logo** para la marca: "{title}".
-Tema de la marca: "{theme}".
-
-Lineamientos creativos:
-- Analiza la palabra clave de la descripción y tradúcela en una emoción o deseo visual.
-- Ajusta la tipografía, formas y composición según la emoción:
-    - Ej: "Seamless" → confort, suavidad → fuentes redondeadas y fluidas, líneas suaves.
-    - Ej: "Running" → fuerza, velocidad → líneas geométricas, tipografía dinámica, monumentalismo/brutalismo.
-    - Palabras alternativas/vanguardistas → ecléctico, manierismo, hyperrealismo, absurdista.
-- Aplica principios de Gestalt: proximidad, similitud, cierre, figura-fondo, pregnancia, continuidad.
-- Aplica técnicas de Kamon japonés: simetría radial, repetición concéntrica, armonía visual.
-- Usa referencias visuales del usuario (máx. 2 imágenes) y del corpus de estilos (1-8) como inspiración.
-- Mantén proporciones equilibradas, espacio negativo suficiente, legibilidad y estética profesional.
-- Recursividad creativa: GPT puede iterar mentalmente elementos para maximizar la coherencia conceptual y emocional.
-
-Salida esperada:
-- Solo una imagen en PNG de alta calidad codificada en base64.
-- Integra nombre de marca dentro del icono de forma estilizada y armónica.
-- No incluyas instrucciones de texto ni múltiples variaciones.
+Crea un **logo único** para la marca "{title}" basado en "{theme}".
+Usa hasta 2 imágenes de referencia y {len(corpus_images_base64)} del corpus.
+Aplica Gestalt: proximidad, similitud, cierre, figura-fondo, pregnancia, continuidad.
+Aplica Kamon japonés: simetría radial, repetición concéntrica.
+Recursividad creativa: adapta formas, tipografía y colores según emoción de la palabra clave.
+Integra el nombre de la marca dentro del icono.
+Entrega **una sola imagen PNG**.
 """
     return prompt_text, user_images_base64, corpus_images_base64
+
 
 # ------------------------------
 # Rutas Flask
