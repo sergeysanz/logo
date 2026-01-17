@@ -43,8 +43,8 @@ Crea un logo profesional para la marca "{title}" basado en "{theme}".
 Transforma los elementos en una abstracción minimalista, elegante y moderna.
 Aplica principios de Gestalt (simetría, cierre, figura-fondo, continuidad, proximidad) para lograr armonía visual.
 El logo debe ser coherente, legible, escalable y adaptable a web e impresión.
-Estilo inspirado en branding profesional de grandes agencias como Leo Burnett o Walter Thompson.
-Fondo transparente, sin texturas ni efectos innecesarios, con líneas y formas definidas.
+Estilo inspirado en branding profesional de grandes agencias.
+Fondo transparente si es posible, sin texturas ni efectos innecesarios, con líneas y formas definidas.
 """
     return prompt_text
 
@@ -101,14 +101,13 @@ def generate_logo():
     img_bytes = None
     logo_error = None
 
-    # 2. Intentar generar logo con DALL·E (alternativo a gpt-image-1)
+    # 2. Intentar generar logo con DALL·E 3
     try:
         response = openai.Image.create(
             model="dall-e-3",  # Modelo alternativo
             prompt=logo_prompt,
             n=1,
-            size="1024x1024",
-            background="transparent"
+            size="1024x1024"
         )
         image_url = response['data'][0]['url']
         img_response = requests.get(image_url)
@@ -122,7 +121,7 @@ def generate_logo():
         except Exception:
             img_bytes = None
 
-    # 3. Generar insight y estrategia
+    # 3. Generar insight y estrategia de marca
     brand_strategy = generate_brand_strategy(title, theme, target_gender, target_age_range)
 
     # 4. Preparar respuesta JSON
