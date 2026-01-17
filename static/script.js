@@ -33,20 +33,19 @@ document.addEventListener("DOMContentLoaded", function () {
         try {
             const response = await fetch("/generate", { method: "POST", body: formData });
 
-            // Intentamos parsear JSON de forma segura
+            // Parseo seguro del JSON
             let data;
             try {
                 data = await response.json();
-            } catch (jsonError) {
+            } catch {
                 insightDiv.textContent = "Error: La respuesta del servidor no es JSON válido.";
                 strategyDiv.textContent = "";
                 return;
             }
 
+            // Mostrar errores
             if (data.error) {
                 insightDiv.textContent = "Error: " + data.error;
-                strategyDiv.textContent = "";
-                return;
             }
 
             // Mostrar logo
