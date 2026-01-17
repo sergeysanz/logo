@@ -18,13 +18,6 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 # Función: Construir prompt para logo
 # ------------------------------
 def build_logo_prompt(title, theme, uploaded_images):
-    """
-    Prompt profesional para generar logos:
-    - Una sola imagen final
-    - Basado en texto y opcionalmente imágenes de referencia
-    - Abstracción minimalista y limpia
-    - Principios de Gestalt aplicados
-    """
     reference_text = ""
     for idx, f in enumerate(uploaded_images, start=1):
         if f:
@@ -32,7 +25,7 @@ def build_logo_prompt(title, theme, uploaded_images):
                 img = Image.open(f.stream)
                 buf = io.BytesIO()
                 img.save(buf, format='PNG')
-                img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+                # No necesitamos el base64, solo para referencia en el prompt
                 reference_text += f" Puedes usar la imagen {idx} como inspiración de forma y silueta."
             except Exception:
                 continue
@@ -52,17 +45,11 @@ Fondo transparente si es posible, sin texturas ni efectos innecesarios, con lín
 # Función: Generar insight y estrategia de marca
 # ------------------------------
 def generate_brand_strategy(title, theme, target_gender, target_age_range):
-    """
-    Genera:
-    - Lema corto o insight de marca
-    - Estrategia de marketing para redes sociales y eventos
-    - Identificación de grupo generacional y rasgos de personalidad
-    """
     prompt_text = f"""
 Eres un experto en branding y marketing. 
 Crea para la marca "{title}" con el tema "{theme}" lo siguiente:
 
-1. Un lema o insight corto y poderoso para la marca. Debe apelar a sentimientos, ser metafórico y breve, como "como caminar en el agua".
+1. Un lema o insight corto y poderoso para la marca.
 2. Estrategia de marketing digital para redes sociales y eventos, adaptada a mujeres de edad {target_age_range}.
 3. Identifica el grupo generacional y los rasgos de personalidad típicos.
 4. Sugiere mensajes, tono y estilo de comunicación más efectivos.
@@ -95,30 +82,36 @@ def generate_logo():
     element1 = request.files.get("element1")
     element2 = request.files.get("element2")
 
-    # 1. Generar prompt para logo
     logo_prompt = build_logo_prompt(title, theme, [element1, element2])
 
     img_bytes = None
     logo_error = None
 
-    # 2. Intentar generar logo con DALL·E 3
+    # ------------------------------
+    # Intentar generar logo con DALL·E 3
+    # ------------------------------
     try:
         response = openai.Image.create(
-            model="dall-e-3",  # Modelo alternativo
+            model="dall-e-3",
             prompt=logo_prompt,
             n=1,
             size="1024x1024"
         )
-        image_url = response['data'][0]['url']
-        img_response = requests.get(image_url)
-        if img_response.status_code == 200:
-            img_bytes = img_response.content
+        image_url = response['data'][0].get('url')
+        if image_url:
+            img_response = requests.get(image_url, timeout=15)
+            if img_response.status_code == 200:
+                img_bytes = img_response.content
+            else:
+                logo_error = f"No se pudo descargar la imagen, status code {img_response.status_code}"
         else:
-            logo_error = f"No se pudo descargar la imagen, status code {img_response.status_code}"
+            logo_error = "No se obtuvo URL de la imagen desde la API."
     except Exception as e:
         logo_error = f"No se pudo generar logo dinámico: {str(e)}"
 
-    # 3. Fallback: placeholder local si falla
+    # ------------------------------
+    # Fallback: usar placeholder local
+    # ------------------------------
     if not img_bytes:
         try:
             with open("static/placeholder.png", "rb") as f:
@@ -128,17 +121,21 @@ def generate_logo():
             img_bytes = None
             logo_error = logo_error or "No hay imagen disponible."
 
-    # 4. Generar insight y estrategia de marca
+    # ------------------------------
+    # Generar insight y estrategia de marca
+    # ------------------------------
     brand_strategy = generate_brand_strategy(title, theme, target_gender, target_age_range)
+    if not brand_strategy:
+        brand_strategy = "No se pudo generar la estrategia."
 
-    # 5. Preparar respuesta JSON segura
-    result = {
+    # ------------------------------
+    # Respuesta JSON segura
+    # ------------------------------
+    return jsonify({
         "logo": base64.b64encode(img_bytes).decode("utf-8") if img_bytes else None,
-        "brand_strategy": brand_strategy or "No se pudo generar la estrategia.",
+        "brand_strategy": brand_strategy,
         "error": logo_error
-    }
-
-    return jsonify(result)
+    })
 
 # ------------------------------
 # Main
