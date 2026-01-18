@@ -1,70 +1,91 @@
 import os
 import io
+import json
 import base64
 import requests
 from flask import Flask, render_template, request, jsonify
 from PIL import Image
 from dotenv import load_dotenv
 import openai
+from google import genai
 
 # ------------------------------
 # Configuración inicial
 # ------------------------------
 load_dotenv()
 app = Flask(__name__)
+
+# OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+# Gemini
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+
 # ------------------------------
-# Función: Construir prompt para logo
+# Función: Construir prompt para logo (DALL·E)
 # ------------------------------
 def build_logo_prompt(title, theme, uploaded_images):
     reference_text = ""
+
     for idx, f in enumerate(uploaded_images, start=1):
         if f:
             try:
-                img = Image.open(f.stream)
-                buf = io.BytesIO()
-                img.save(buf, format='PNG')
-                # Solo para referencia en el prompt
-                reference_text += f" Puedes usar la imagen {idx} como inspiración de forma y silueta."
+                Image.open(f.stream)
+                reference_text += f" Usa la imagen {idx} solo como referencia de forma y silueta."
             except Exception:
                 continue
 
-    prompt_text = f"""
+    return f"""
 Crea un logo profesional para la marca "{title}" basado en "{theme}".
 {reference_text}
-Transforma los elementos en una abstracción minimalista, elegante y moderna.
-Aplica principios de Gestalt (simetría, cierre, figura-fondo, continuidad, proximidad) para lograr armonía visual.
-El logo debe ser coherente, legible, escalable y adaptable a web e impresión.
-Estilo inspirado en branding profesional de grandes agencias.
-Fondo transparente si es posible, sin texturas ni efectos innecesarios, con líneas y formas definidas.
-"""
-    return prompt_text
+
+Características:
+- Minimalista
+- Elegante
+- Escalable
+- Branding de agencia premium
+- Fondo transparente
+- Sin mockups
+- Sin texto adicional
+- Formas claras y definidas
+""".strip()
 
 # ------------------------------
-# Función: Generar insight y estrategia de marca
+# Función: Estrategia de marca (Gemini)
 # ------------------------------
 def generate_brand_strategy(title, theme, target_gender, target_age_range):
-    prompt_text = f"""
-Eres un experto en branding y marketing. 
-Crea para la marca "{title}" con el tema "{theme}" lo siguiente:
+    prompt = f"""
+Actúa como estratega senior de branding.
 
-1. Un lema o insight corto y poderoso para la marca.
-2. Estrategia de marketing digital para redes sociales y eventos, adaptada a mujeres de edad {target_age_range}.
-3. Identifica el grupo generacional y los rasgos de personalidad típicos.
-4. Sugiere mensajes, tono y estilo de comunicación más efectivos.
+Marca: {title}
+Concepto: {theme}
+Público: {target_gender}, {target_age_range}
 
-Entrega la información de forma clara y organizada.
+Devuelve SOLO JSON válido con esta estructura:
+
+{{
+  "insight": "lema corto y poderoso",
+  "marketing_strategy": {{
+    "social_media": ["idea 1", "idea 2"],
+    "events": ["evento 1", "evento 2"],
+    "tone": "tono de comunicación"
+  }}
+}}
 """
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt_text}],
-            max_tokens=500
-        )
-        return response.choices[0].message['content']
-    except Exception as e:
-        return f"Error generando estrategia: {str(e)}"
+
+    response = gemini_client.models.generate_content(
+        model="gemini-3-flash-preview",
+        contents=prompt
+    )
+
+    text = response.text.strip()
+
+    # Limpieza si Gemini envuelve en ```json
+    if text.startswith("```"):
+        text = text.replace("```json", "").replace("```", "").strip()
+
+    return json.loads(text)
 
 # ------------------------------
 # Rutas Flask
@@ -76,82 +97,86 @@ def index():
 @app.route('/generate', methods=['POST'])
 def generate_logo():
     try:
-        # Obtener datos del formulario
         title = request.form.get("title", "").strip()
         theme = request.form.get("theme", "").strip()
-        target_gender = request.form.get("gender", "mujer")
-        target_age_range = request.form.get("age_range", "18-35")
+        gender = request.form.get("gender", "mujer")
+        age_range = request.form.get("age_range", "18-35")
+
         element1 = request.files.get("element1")
         element2 = request.files.get("element2")
 
-        logo_prompt = build_logo_prompt(title, theme, [element1, element2])
-
+        # ------------------------------
+        # LOGO (OpenAI / DALL·E)
+        # ------------------------------
         img_bytes = None
         logo_error = None
 
-        # ------------------------------
-        # Generar logo con DALL·E 3
-        # ------------------------------
         try:
-            response = openai.Image.create(
+            logo_prompt = build_logo_prompt(title, theme, [element1, element2])
+
+            dalle_response = openai.Image.create(
                 model="dall-e-3",
                 prompt=logo_prompt,
-                n=1,
-                size="1024x1024"
+                size="1024x1024",
+                n=1
             )
-            image_url = response['data'][0].get('url')
-            if image_url:
-                img_response = requests.get(image_url, timeout=30)
-                if img_response.status_code == 200:
-                    img_bytes = img_response.content
-                else:
-                    logo_error = f"No se pudo descargar la imagen, status code {img_response.status_code}"
+
+            image_url = dalle_response["data"][0]["url"]
+            img_response = requests.get(image_url, timeout=30)
+
+            if img_response.status_code == 200:
+                img_bytes = img_response.content
             else:
-                logo_error = "No se obtuvo URL de la imagen desde la API."
+                logo_error = "No se pudo descargar la imagen generada"
+
         except Exception as e:
-            logo_error = f"No se pudo generar logo dinámico: {str(e)}"
+            logo_error = f"Error DALL·E: {str(e)}"
 
         # ------------------------------
-        # Fallback: usar placeholder local
+        # Fallback placeholder
         # ------------------------------
         if not img_bytes:
             try:
                 with open("static/placeholder.png", "rb") as f:
                     img_bytes = f.read()
-                logo_error = logo_error or "Se usó placeholder local porque falló la generación de logo."
+                logo_error = logo_error or "Se usó placeholder local"
             except Exception:
                 img_bytes = None
-                logo_error = logo_error or "No hay imagen disponible."
 
         # ------------------------------
-        # Generar insight y estrategia de marca
+        # Estrategia (Gemini)
         # ------------------------------
         try:
-            brand_strategy = generate_brand_strategy(title, theme, target_gender, target_age_range)
-            if not brand_strategy:
-                brand_strategy = "No se pudo generar la estrategia."
+            strategy = generate_brand_strategy(
+                title, theme, gender, age_range
+            )
         except Exception as e:
-            brand_strategy = f"Error generando estrategia: {str(e)}"
+            strategy = {
+                "insight": "No se pudo generar insight",
+                "marketing_strategy": {},
+            }
 
         # ------------------------------
-        # Respuesta JSON segura
+        # RESPUESTA JSON FINAL
         # ------------------------------
         return jsonify({
             "logo": base64.b64encode(img_bytes).decode("utf-8") if img_bytes else None,
-            "brand_strategy": brand_strategy,
+            "insight": strategy.get("insight"),
+            "marketing_strategy": strategy.get("marketing_strategy"),
             "error": logo_error
         })
 
     except Exception as e:
-        # Siempre devolver JSON aunque ocurra un error inesperado
+        # Nunca romper JSON
         return jsonify({
             "logo": None,
-            "brand_strategy": None,
+            "insight": None,
+            "marketing_strategy": None,
             "error": f"Error inesperado: {str(e)}"
         })
 
 # ------------------------------
 # Main
 # ------------------------------
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
