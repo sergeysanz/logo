@@ -59,27 +59,18 @@ Características obligatorias:
 """.strip()
 
 # -----------------------------------
-# Prompt Estrategia (Gemini)
+# Prompt Estrategia (Gemini optimizado)
 # -----------------------------------
 def generate_brand_text(brand_name, brand_description, age):
     prompt = f"""
-Actúa como un estratega senior de branding, psicología del consumidor y semiótica.
+Eres un estratega senior de branding.
 
-Datos de entrada:
-- Nombre de la marca: "{brand_name}"
-- Descripción de la marca: "{brand_description}"
-- Edad promedio de la audiencia: {age}
+Marca: {brand_name}
+Descripción: {brand_description}
+Edad promedio de la audiencia: {age}
 
-Primero, determina implícitamente el perfil generacional según la edad:
-- Audiencias jóvenes: creativas, lúdicas, emocionales, con rasgos de neuroticismo, estética gamer o experimental.
-- Millennials: alta apertura a la experiencia, búsqueda de significado, identidad y emociones auténticas.
-- Audiencias adultas: racionales, informativas, orientadas a confianza, utilidad y claridad.
-
-Luego:
-- Define los rasgos de personalidad dominantes (Big Five de forma implícita).
-- Analiza semántica y metafóricamente el nombre y la descripción de la marca.
-- Identifica emociones, símbolos y palabras clave implícitas.
-- Conecta esos elementos con los sentimientos dominantes de la audiencia.
+Determina implícitamente el perfil generacional según la edad.
+Relaciona el nombre y la descripción con emociones, símbolos y rasgos psicológicos.
 
 Genera un ÚNICO TEXTO en español con EXACTAMENTE esta estructura:
 
@@ -87,17 +78,24 @@ PERFIL DE AUDIENCIA:
 (descripción psicológica y generacional)
 
 INSIGHT EMOCIONAL:
-(frase corta, poderosa, basada en sentimiento y rasgos psicológicos)
+(frase corta, potente y emocional)
 
 ESTRATEGIA DE MARKETING:
-(tono, narrativa, cómo debe comunicarse la marca para resonar con esta audiencia)
+(tono y narrativa de comunicación)
 
-No uses listas numeradas.
+No uses listas.
 No uses JSON.
-No agregues explicaciones fuera de esta estructura.
+No agregues texto adicional.
 """
 
     response = gemini_model.generate_content(prompt)
+
+    # ---- LOG para debug en Render
+    print("🔍 GEMINI RESPONSE:", response)
+
+    if not hasattr(response, "text") or not response.text:
+        raise ValueError("Gemini no devolvió texto")
+
     return response.text.strip()
 
 # -----------------------------------
@@ -112,7 +110,10 @@ def generate():
     try:
         brand_name = request.form.get("title", "").strip()
         brand_description = request.form.get("theme", "").strip()
-        age = int(request.form.get("age", 30))
+
+        # 👇 CORRECCIÓN IMPORTANTE
+        age_raw = request.form.get("age_range", "").strip()
+        age = int(age_raw) if age_raw.isdigit() else 30
 
         element1 = request.files.get("element1")
         element2 = request.files.get("element2")
@@ -152,7 +153,8 @@ def generate():
                 brand_description,
                 age
             )
-        except Exception:
+        except Exception as e:
+            print("❌ ERROR GEMINI:", str(e))
             strategy_text = "No se pudo generar el contenido estratégico."
 
         # ---------- RESPUESTA ----------
@@ -170,7 +172,7 @@ def generate():
         })
 
 # -----------------------------------
-# Run
+# Run (Render compatible)
 # -----------------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
