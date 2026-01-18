@@ -1,5 +1,4 @@
 import os
-import io
 import json
 import base64
 import requests
@@ -7,7 +6,7 @@ from flask import Flask, render_template, request, jsonify
 from PIL import Image
 from dotenv import load_dotenv
 import openai
-from google import genai
+import google.generativeai as genai
 
 # ------------------------------
 # Configuración inicial
@@ -15,26 +14,31 @@ from google import genai
 load_dotenv()
 app = Flask(__name__)
 
-# OpenAI
+# ------------------------------
+# OpenAI (DALL·E)
+# ------------------------------
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Gemini
+# ------------------------------
+# Gemini (Branding & Estrategia)
+# ------------------------------
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+genai.configure(api_key=GEMINI_API_KEY)
+gemini_model = genai.GenerativeModel("gemini-1.5-flash")
 
 # ------------------------------
-# Función: Construir prompt para logo (DALL·E)
+# Función: Construir prompt para logo
 # ------------------------------
 def build_logo_prompt(title, theme, uploaded_images):
     reference_text = ""
 
     for idx, f in enumerate(uploaded_images, start=1):
-        if f:
+        if f and f.filename:
             try:
                 Image.open(f.stream)
                 reference_text += f" Usa la imagen {idx} solo como referencia de forma y silueta."
             except Exception:
-                continue
+                pass
 
     return f"""
 Crea un logo profesional para la marca "{title}" basado en "{theme}".
@@ -74,14 +78,10 @@ Devuelve SOLO JSON válido con esta estructura:
 }}
 """
 
-    response = gemini_client.models.generate_content(
-        model="gemini-3-flash-preview",
-        contents=prompt
-    )
-
+    response = gemini_model.generate_content(prompt)
     text = response.text.strip()
 
-    # Limpieza si Gemini envuelve en ```json
+    # Limpieza por si Gemini envuelve en ```json
     if text.startswith("```"):
         text = text.replace("```json", "").replace("```", "").strip()
 
@@ -90,11 +90,11 @@ Devuelve SOLO JSON válido con esta estructura:
 # ------------------------------
 # Rutas Flask
 # ------------------------------
-@app.route('/')
+@app.route("/")
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
-@app.route('/generate', methods=['POST'])
+@app.route("/generate", methods=["POST"])
 def generate_logo():
     try:
         title = request.form.get("title", "").strip()
@@ -106,7 +106,7 @@ def generate_logo():
         element2 = request.files.get("element2")
 
         # ------------------------------
-        # LOGO (OpenAI / DALL·E)
+        # LOGO (DALL·E)
         # ------------------------------
         img_bytes = None
         logo_error = None
@@ -150,10 +150,10 @@ def generate_logo():
             strategy = generate_brand_strategy(
                 title, theme, gender, age_range
             )
-        except Exception as e:
+        except Exception:
             strategy = {
                 "insight": "No se pudo generar insight",
-                "marketing_strategy": {},
+                "marketing_strategy": {}
             }
 
         # ------------------------------
@@ -167,7 +167,6 @@ def generate_logo():
         })
 
     except Exception as e:
-        # Nunca romper JSON
         return jsonify({
             "logo": None,
             "insight": None,
@@ -176,9 +175,8 @@ def generate_logo():
         })
 
 # ------------------------------
-# Main
+# Main (Render compatible)
 # ------------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-
