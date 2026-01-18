@@ -1,6 +1,13 @@
 Flask==2.3.3
 gunicorn==21.2.0
+
+# OpenAI (DALL·E)
 openai==0.28.0
-Pillow==12.1.0
+
+# Gemini (Google)
+google-generativeai==0.4.1
+
+# Utilidades
 python-dotenv==1.0.0
 requests==2.31.0
+Pillow==12.1.0
