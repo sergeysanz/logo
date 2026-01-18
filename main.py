@@ -2,6 +2,7 @@ import os
 import json
 import base64
 import requests
+import re
 from flask import Flask, render_template, request, jsonify
 from PIL import Image
 from dotenv import load_dotenv
@@ -20,14 +21,22 @@ app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # ------------------------------
-# Gemini (Branding & Estrategia)
+# Gemini
 # ------------------------------
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-genai.configure(api_key=GEMINI_API_KEY)
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 gemini_model = genai.GenerativeModel("gemini-1.5-flash")
 
 # ------------------------------
-# Función: Construir prompt para logo
+# Utils
+# ------------------------------
+def extract_json(text):
+    match = re.search(r"\{[\s\S]*\}", text)
+    if not match:
+        raise ValueError("No se encontró JSON")
+    return json.loads(match.group())
+
+# ------------------------------
+# Prompt Logo
 # ------------------------------
 def build_logo_prompt(title, theme, uploaded_images):
     reference_text = ""
@@ -56,39 +65,32 @@ Características:
 """.strip()
 
 # ------------------------------
-# Función: Estrategia de marca (Gemini)
+# Estrategia Gemini
 # ------------------------------
-def generate_brand_strategy(title, theme, target_gender, target_age_range):
+def generate_brand_strategy(title, theme, gender, age_range):
     prompt = f"""
-Actúa como estratega senior de branding.
-
-Marca: {title}
-Concepto: {theme}
-Público: {target_gender}, {target_age_range}
-
-Devuelve SOLO JSON válido con esta estructura:
+Responde SOLO con JSON válido.
+NO markdown. NO texto adicional.
 
 {{
   "insight": "lema corto y poderoso",
   "marketing_strategy": {{
+    "tone": "tono de comunicación",
     "social_media": ["idea 1", "idea 2"],
-    "events": ["evento 1", "evento 2"],
-    "tone": "tono de comunicación"
+    "events": ["evento 1", "evento 2"]
   }}
 }}
+
+Marca: {title}
+Concepto: {theme}
+Público: {gender}, {age_range}
 """
 
     response = gemini_model.generate_content(prompt)
-    text = response.text.strip()
-
-    # Limpieza por si Gemini envuelve en ```json
-    if text.startswith("```"):
-        text = text.replace("```json", "").replace("```", "").strip()
-
-    return json.loads(text)
+    return extract_json(response.text)
 
 # ------------------------------
-# Rutas Flask
+# Routes
 # ------------------------------
 @app.route("/")
 def index():
@@ -97,70 +99,46 @@ def index():
 @app.route("/generate", methods=["POST"])
 def generate_logo():
     try:
-        title = request.form.get("title", "").strip()
-        theme = request.form.get("theme", "").strip()
+        title = request.form.get("title", "")
+        theme = request.form.get("theme", "")
         gender = request.form.get("gender", "mujer")
         age_range = request.form.get("age_range", "18-35")
 
         element1 = request.files.get("element1")
         element2 = request.files.get("element2")
 
-        # ------------------------------
-        # LOGO (DALL·E)
-        # ------------------------------
+        # ---- Logo
         img_bytes = None
         logo_error = None
 
         try:
-            logo_prompt = build_logo_prompt(title, theme, [element1, element2])
-
-            dalle_response = openai.Image.create(
+            prompt = build_logo_prompt(title, theme, [element1, element2])
+            dalle = openai.Image.create(
                 model="dall-e-3",
-                prompt=logo_prompt,
+                prompt=prompt,
                 size="1024x1024",
                 n=1
             )
-
-            image_url = dalle_response["data"][0]["url"]
-            img_response = requests.get(image_url, timeout=30)
-
-            if img_response.status_code == 200:
-                img_bytes = img_response.content
-            else:
-                logo_error = "No se pudo descargar la imagen generada"
-
+            image_url = dalle["data"][0]["url"]
+            img_bytes = requests.get(image_url, timeout=30).content
         except Exception as e:
-            logo_error = f"Error DALL·E: {str(e)}"
+            logo_error = str(e)
 
-        # ------------------------------
-        # Fallback placeholder
-        # ------------------------------
         if not img_bytes:
-            try:
-                with open("static/placeholder.png", "rb") as f:
-                    img_bytes = f.read()
-                logo_error = logo_error or "Se usó placeholder local"
-            except Exception:
-                img_bytes = None
+            with open("static/placeholder.png", "rb") as f:
+                img_bytes = f.read()
 
-        # ------------------------------
-        # Estrategia (Gemini)
-        # ------------------------------
+        # ---- Estrategia
         try:
-            strategy = generate_brand_strategy(
-                title, theme, gender, age_range
-            )
+            strategy = generate_brand_strategy(title, theme, gender, age_range)
         except Exception:
             strategy = {
                 "insight": "No se pudo generar insight",
                 "marketing_strategy": {}
             }
 
-        # ------------------------------
-        # RESPUESTA JSON FINAL
-        # ------------------------------
         return jsonify({
-            "logo": base64.b64encode(img_bytes).decode("utf-8") if img_bytes else None,
+            "logo": base64.b64encode(img_bytes).decode(),
             "insight": strategy.get("insight"),
             "marketing_strategy": strategy.get("marketing_strategy"),
             "error": logo_error
@@ -171,11 +149,11 @@ def generate_logo():
             "logo": None,
             "insight": None,
             "marketing_strategy": None,
-            "error": f"Error inesperado: {str(e)}"
+            "error": str(e)
         })
 
 # ------------------------------
-# Main (Render compatible)
+# Run
 # ------------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
